@@ -19,6 +19,7 @@ const TABS = [
   { label: 'Links', href: '/links' },
   { label: 'Env', href: '/env' },
   { label: 'GitHub', href: '/github' },
+  { label: 'Activity', href: '/activity' },
   { label: 'Settings', href: '/settings', adminOnly: true },
 ] as const;
 

@@ -1,6 +1,7 @@
 import { apiHandler } from '@/shared/middleware/api-handler';
 import { requireRole } from '@/shared/middleware/role-guard';
 import { ProjectService } from '@/modules/projects/project.service';
+import { ActivityService } from '@/modules/activity/activity.service';
 import '@/modules/users/user.model';
 import { checkProjectAccess } from '@/shared/middleware/project-access';
 import { updateProjectSchema } from '@/modules/projects/project.validator';
@@ -29,6 +30,11 @@ export const PATCH = apiHandler({
     await checkProjectAccess(ctx.params.id, ctx.user.userId, ctx.user.role);
     const body = ctx.body as UpdateProjectInput;
     const project = await ProjectService.update(ctx.params.id, body);
+    ActivityService.log({
+      project: ctx.params.id, actor: ctx.user.userId,
+      action: 'project_updated', targetType: 'project',
+      targetId: ctx.params.id, targetTitle: project.name,
+    }).catch(() => {});
     return { data: project.toJSON() };
   },
 });

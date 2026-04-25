@@ -34,12 +34,12 @@ describe('TaskService', () => {
       expect(task.project.toString()).toBe(projectId);
     });
 
-    it('creates a task with sprint and assignee', async () => {
+    it('creates a task with assignees', async () => {
       const task = await TaskService.create(projectId, {
         title: 'Task with refs',
-        assigneeId: userId,
+        assigneeIds: [userId],
       });
-      expect(task.assignee!.toString()).toBe(userId);
+      expect(task.assignees.map((a: { toString(): string }) => a.toString())).toContain(userId);
     });
   });
 
@@ -67,7 +67,7 @@ describe('TaskService', () => {
     });
 
     it('filters by assignee', async () => {
-      await createTask(projectId, { assignee: userId });
+      await createTask(projectId, { assignees: [userId] });
       await createTask(projectId);
       const result = await TaskService.list(projectId, { assignee: userId });
       expect(result.tasks).toHaveLength(1);
@@ -83,7 +83,7 @@ describe('TaskService', () => {
 
   describe('getById', () => {
     it('returns a task with populated fields', async () => {
-      const task = await createTask(projectId, { assignee: userId });
+      const task = await createTask(projectId, { assignees: [userId] });
       const found = await TaskService.getById(task._id.toString());
       expect(found.title).toBe('Test Task');
     });
@@ -150,6 +150,29 @@ describe('TaskService', () => {
       await expect(
         TaskService.delete('507f1f77bcf86cd799439011'),
       ).rejects.toThrow('Task not found');
+    });
+  });
+
+  describe('getMyTasks', () => {
+    it('returns tasks assigned to user', async () => {
+      await createTask(projectId, { assignees: [userId], status: 'todo' });
+      await createTask(projectId, { status: 'todo' });
+      const tasks = await TaskService.getMyTasks(userId);
+      expect(tasks).toHaveLength(1);
+    });
+
+    it('excludes done tasks by default', async () => {
+      await createTask(projectId, { assignees: [userId], status: 'done' });
+      await createTask(projectId, { assignees: [userId], status: 'todo' });
+      const tasks = await TaskService.getMyTasks(userId);
+      expect(tasks).toHaveLength(1);
+    });
+
+    it('includes done tasks when requested', async () => {
+      await createTask(projectId, { assignees: [userId], status: 'done' });
+      await createTask(projectId, { assignees: [userId], status: 'todo' });
+      const tasks = await TaskService.getMyTasks(userId, { includeDone: true });
+      expect(tasks).toHaveLength(2);
     });
   });
 });

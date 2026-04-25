@@ -1,7 +1,22 @@
 import { CodexClient } from '@/modules/ai/codex-client';
 
-// Mock global fetch
+jest.mock('@/config/env', () => ({
+  env: {},
+}));
+
 global.fetch = jest.fn();
+
+function mockSSEResponse(text: string) {
+  const sseData = [
+    `data: ${JSON.stringify({ type: 'response.output_text.delta', delta: text })}`,
+    'data: [DONE]',
+  ].join('\n');
+
+  return {
+    ok: true,
+    text: jest.fn().mockResolvedValue(sseData),
+  };
+}
 
 describe('CodexClient', () => {
   beforeEach(() => {
@@ -9,13 +24,7 @@ describe('CodexClient', () => {
   });
 
   it('sends request with correct headers and body', async () => {
-    const mockResponse = {
-      ok: true,
-      json: jest.fn().mockResolvedValue({
-        output: [{ type: 'message', content: [{ type: 'output_text', text: 'Result text' }] }],
-      }),
-    };
-    (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+    (global.fetch as jest.Mock).mockResolvedValue(mockSSEResponse('Result text'));
 
     const result = await CodexClient.complete({
       accessToken: 'token-123',
@@ -30,30 +39,21 @@ describe('CodexClient', () => {
         method: 'POST',
         headers: expect.objectContaining({
           Authorization: 'Bearer token-123',
-          'ChatGPT-Account-ID': 'acct_abc',
+          'chatgpt-account-id': 'acct_abc',
         }),
       }),
     );
     expect(result).toBe('Result text');
   });
 
-  it('sends request without ChatGPT-Account-ID when no accountId', async () => {
-    const mockResponse = {
-      ok: true,
-      json: jest.fn().mockResolvedValue({
-        output: [{ type: 'message', content: [{ type: 'output_text', text: 'OK' }] }],
+  it('throws when no accountId provided', async () => {
+    await expect(
+      CodexClient.complete({
+        accessToken: 'token-123',
+        instructions: 'test',
+        input: 'test',
       }),
-    };
-    (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
-
-    await CodexClient.complete({
-      accessToken: 'token-123',
-      instructions: 'test',
-      input: 'test',
-    });
-
-    const callArgs = (global.fetch as jest.Mock).mock.calls[0][1];
-    expect(callArgs.headers['ChatGPT-Account-ID']).toBeUndefined();
+    ).rejects.toThrow('ChatGPT Account ID is required');
   });
 
   it('throws on non-OK response', async () => {
@@ -66,39 +66,35 @@ describe('CodexClient', () => {
     await expect(
       CodexClient.complete({
         accessToken: 'bad-token',
+        accountId: 'acct_abc',
         instructions: 'test',
         input: 'test',
       }),
-    ).rejects.toThrow('Codex API request failed');
+    ).rejects.toThrow('Codex API failed');
   });
 
-  it('returns empty string when output is missing', async () => {
-    const mockResponse = {
+  it('throws when SSE stream returns empty', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: jest.fn().mockResolvedValue({}),
-    };
-    (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
-
-    const result = await CodexClient.complete({
-      accessToken: 'token-123',
-      instructions: 'test',
-      input: 'test',
+      text: jest.fn().mockResolvedValue('data: [DONE]\n'),
     });
 
-    expect(result).toBe('');
+    await expect(
+      CodexClient.complete({
+        accessToken: 'token-123',
+        accountId: 'acct_abc',
+        instructions: 'test',
+        input: 'test',
+      }),
+    ).rejects.toThrow('Codex API returned empty response');
   });
 
   it('uses custom model when specified', async () => {
-    const mockResponse = {
-      ok: true,
-      json: jest.fn().mockResolvedValue({
-        output: [{ type: 'message', content: [{ type: 'output_text', text: 'OK' }] }],
-      }),
-    };
-    (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+    (global.fetch as jest.Mock).mockResolvedValue(mockSSEResponse('OK'));
 
     await CodexClient.complete({
       accessToken: 'token-123',
+      accountId: 'acct_abc',
       instructions: 'test',
       input: 'test',
       model: 'gpt-4o-mini',
@@ -107,5 +103,28 @@ describe('CodexClient', () => {
     const callArgs = (global.fetch as jest.Mock).mock.calls[0][1];
     const body = JSON.parse(callArgs.body);
     expect(body.model).toBe('gpt-4o-mini');
+    expect(body.stream).toBe(true);
+  });
+
+  it('concatenates multiple SSE deltas', async () => {
+    const sseData = [
+      `data: ${JSON.stringify({ type: 'response.output_text.delta', delta: 'Hello ' })}`,
+      `data: ${JSON.stringify({ type: 'response.output_text.delta', delta: 'World' })}`,
+      'data: [DONE]',
+    ].join('\n');
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(sseData),
+    });
+
+    const result = await CodexClient.complete({
+      accessToken: 'token-123',
+      accountId: 'acct_abc',
+      instructions: 'test',
+      input: 'test',
+    });
+
+    expect(result).toBe('Hello World');
   });
 });

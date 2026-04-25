@@ -35,7 +35,7 @@ export function KanbanColumn({
   return (
     <div
       className={cn(
-        'flex min-h-[200px] flex-1 flex-col rounded-lg bg-subtle/50 transition-colors duration-[120ms]',
+        'flex min-h-[200px] min-w-[260px] flex-1 flex-col rounded-lg bg-subtle/50 transition-colors duration-[120ms]',
         isOver && 'border border-[var(--color-accent)]/30 bg-[var(--color-accent-muted)]/30',
       )}
     >

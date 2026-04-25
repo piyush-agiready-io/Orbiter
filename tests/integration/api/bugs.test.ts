@@ -1,6 +1,7 @@
 import { setupTestDB, teardownTestDB, clearCollections } from '../../helpers/db';
 import { getAuthenticatedUser } from '../../helpers/auth';
 import { createProject, createBug } from '../../helpers/factory';
+import { callRoute } from '../../helpers/call-route';
 
 jest.mock('@/config/env', () => ({
   env: {
@@ -11,61 +12,21 @@ jest.mock('@/config/env', () => ({
   },
 }));
 
-beforeAll(async () => {
-  await setupTestDB();
-});
-
-afterAll(async () => {
-  await teardownTestDB();
-});
-
-afterEach(async () => {
-  await clearCollections();
-});
-
-async function callRoute(
-  routeModule: Record<string, (...args: unknown[]) => unknown>,
-  method: string,
-  opts: {
-    token: string;
-    params?: Record<string, string>;
-    body?: unknown;
-    query?: Record<string, string>;
-  },
-) {
-  const url = new URL('http://localhost:3000/api/v1/test');
-  if (opts.query) {
-    for (const [k, v] of Object.entries(opts.query)) url.searchParams.set(k, v);
-  }
-  const req = new Request(url, {
-    method,
-    headers: {
-      Authorization: `Bearer ${opts.token}`,
-      'Content-Type': 'application/json',
-    },
-    ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
-  });
-  (req as Record<string, unknown>).nextUrl = url;
-  const handler = routeModule[method]!;
-  const res = await handler(req, { params: Promise.resolve(opts.params ?? {}) });
-  return { status: res.status, body: await res.json() };
-}
+beforeAll(async () => { await setupTestDB(); });
+afterAll(async () => { await teardownTestDB(); });
+afterEach(async () => { await clearCollections(); });
 
 describe('POST /api/v1/projects/:id/bugs', () => {
   it('creates a bug', async () => {
     const { user, token } = await getAuthenticatedUser();
     const project = await createProject(user._id.toString());
 
-    const { POST } = await import('@/app/api/v1/projects/[id]/bugs/route');
-    const { status, body } = await callRoute(
-      { POST },
-      'POST',
-      {
-        token,
-        params: { id: project._id.toString() },
-        body: { title: 'New bug', priority: 'P1' },
-      },
-    );
+    const route = await import('@/app/api/v1/projects/[id]/bugs/route');
+    const { status, body } = await callRoute(route, 'POST', {
+      token,
+      params: { id: project._id.toString() },
+      body: { title: 'New bug', priority: 'P1' },
+    });
     expect(status).toBe(201);
     expect(body.data.title).toBe('New bug');
     expect(body.data.priority).toBe('P1');
@@ -76,16 +37,12 @@ describe('POST /api/v1/projects/:id/bugs', () => {
     const { user, token } = await getAuthenticatedUser();
     const project = await createProject(user._id.toString());
 
-    const { POST } = await import('@/app/api/v1/projects/[id]/bugs/route');
-    const { status } = await callRoute(
-      { POST },
-      'POST',
-      {
-        token,
-        params: { id: project._id.toString() },
-        body: { priority: 'P1' },
-      },
-    );
+    const route = await import('@/app/api/v1/projects/[id]/bugs/route');
+    const { status } = await callRoute(route, 'POST', {
+      token,
+      params: { id: project._id.toString() },
+      body: { priority: 'P1' },
+    });
     expect(status).toBe(400);
   });
 });
@@ -97,12 +54,11 @@ describe('GET /api/v1/projects/:id/bugs', () => {
     await createBug(project._id.toString(), user._id.toString());
     await createBug(project._id.toString(), user._id.toString());
 
-    const { GET } = await import('@/app/api/v1/projects/[id]/bugs/route');
-    const { status, body } = await callRoute(
-      { GET },
-      'GET',
-      { token, params: { id: project._id.toString() } },
-    );
+    const route = await import('@/app/api/v1/projects/[id]/bugs/route');
+    const { status, body } = await callRoute(route, 'GET', {
+      token,
+      params: { id: project._id.toString() },
+    });
     expect(status).toBe(200);
     expect(body.data.bugs).toHaveLength(2);
     expect(body.data.total).toBe(2);
@@ -115,12 +71,11 @@ describe('GET /api/v1/bugs/:id', () => {
     const project = await createProject(user._id.toString());
     const bug = await createBug(project._id.toString(), user._id.toString());
 
-    const { GET } = await import('@/app/api/v1/bugs/[id]/route');
-    const { status, body } = await callRoute(
-      { GET },
-      'GET',
-      { token, params: { id: bug._id.toString() } },
-    );
+    const route = await import('@/app/api/v1/bugs/[id]/route');
+    const { status, body } = await callRoute(route, 'GET', {
+      token,
+      params: { id: bug._id.toString() },
+    });
     expect(status).toBe(200);
     expect(body.data.title).toBe('Test Bug');
     expect(body.data.reporter.name).toBe('Test User');
@@ -133,16 +88,12 @@ describe('PATCH /api/v1/bugs/:id', () => {
     const project = await createProject(user._id.toString());
     const bug = await createBug(project._id.toString(), user._id.toString());
 
-    const { PATCH } = await import('@/app/api/v1/bugs/[id]/route');
-    const { status, body } = await callRoute(
-      { PATCH },
-      'PATCH',
-      {
-        token,
-        params: { id: bug._id.toString() },
-        body: { status: 'investigating' },
-      },
-    );
+    const route = await import('@/app/api/v1/bugs/[id]/route');
+    const { status, body } = await callRoute(route, 'PATCH', {
+      token,
+      params: { id: bug._id.toString() },
+      body: { status: 'investigating' },
+    });
     expect(status).toBe(200);
     expect(body.data.status).toBe('investigating');
   });
@@ -154,12 +105,11 @@ describe('DELETE /api/v1/bugs/:id', () => {
     const project = await createProject(user._id.toString());
     const bug = await createBug(project._id.toString(), user._id.toString());
 
-    const { DELETE } = await import('@/app/api/v1/bugs/[id]/route');
-    const { status } = await callRoute(
-      { DELETE },
-      'DELETE',
-      { token, params: { id: bug._id.toString() } },
-    );
+    const route = await import('@/app/api/v1/bugs/[id]/route');
+    const { status } = await callRoute(route, 'DELETE', {
+      token,
+      params: { id: bug._id.toString() },
+    });
     expect(status).toBe(200);
   });
 
@@ -169,12 +119,11 @@ describe('DELETE /api/v1/bugs/:id', () => {
     const project = await createProject(admin._id.toString());
     const bug = await createBug(project._id.toString(), admin._id.toString());
 
-    const { DELETE } = await import('@/app/api/v1/bugs/[id]/route');
-    const { status } = await callRoute(
-      { DELETE },
-      'DELETE',
-      { token: clientToken, params: { id: bug._id.toString() } },
-    );
+    const route = await import('@/app/api/v1/bugs/[id]/route');
+    const { status } = await callRoute(route, 'DELETE', {
+      token: clientToken,
+      params: { id: bug._id.toString() },
+    });
     expect(status).toBe(403);
   });
 });
@@ -185,16 +134,12 @@ describe('PATCH /api/v1/bugs/:id/link', () => {
     const project = await createProject(user._id.toString());
     const bug = await createBug(project._id.toString(), user._id.toString());
 
-    const { PATCH } = await import('@/app/api/v1/bugs/[id]/link/route');
-    const { status, body } = await callRoute(
-      { PATCH },
-      'PATCH',
-      {
-        token,
-        params: { id: bug._id.toString() },
-        body: { taskId: null },
-      },
-    );
+    const route = await import('@/app/api/v1/bugs/[id]/link/route');
+    const { status, body } = await callRoute(route, 'PATCH', {
+      token,
+      params: { id: bug._id.toString() },
+      body: { taskId: null },
+    });
     expect(status).toBe(200);
     expect(body.success).toBe(true);
   });

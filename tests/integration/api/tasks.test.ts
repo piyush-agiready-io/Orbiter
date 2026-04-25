@@ -1,6 +1,7 @@
 import { setupTestDB, teardownTestDB, clearCollections } from '../../helpers/db';
 import { createProject, createTask } from '../../helpers/factory';
 import { getAuthenticatedUser } from '../../helpers/auth';
+import { callRoute } from '../../helpers/call-route';
 
 jest.mock('@/config/env', () => ({
   env: {
@@ -19,35 +20,31 @@ describe('POST /api/v1/projects/:id/tasks', () => {
     const { user, token } = await getAuthenticatedUser('internal');
     const project = await createProject(user._id.toString());
 
-    const { POST } = await import('@/app/api/v1/projects/[id]/tasks/route');
-    const req = new Request('http://localhost/api/v1/projects/test/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ title: 'Build login page' }),
+    const route = await import('@/app/api/v1/projects/[id]/tasks/route');
+    const { status, body } = await callRoute(route, 'POST', {
+      token,
+      params: { id: project._id.toString() },
+      body: { title: 'Build login page' },
     });
 
-    const res = await POST(req, { params: Promise.resolve({ id: project._id.toString() }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(201);
-    expect(json.data.title).toBe('Build login page');
-    expect(json.data.status).toBe('backlog');
-    expect(json.data.priority).toBe('P2');
+    expect(status).toBe(201);
+    expect(body.data.title).toBe('Build login page');
+    expect(body.data.status).toBe('backlog');
+    expect(body.data.priority).toBe('P2');
   });
 
   it('returns 400 for missing title', async () => {
     const { user, token } = await getAuthenticatedUser('internal');
     const project = await createProject(user._id.toString());
 
-    const { POST } = await import('@/app/api/v1/projects/[id]/tasks/route');
-    const req = new Request('http://localhost/api/v1/projects/test/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({}),
+    const route = await import('@/app/api/v1/projects/[id]/tasks/route');
+    const { status } = await callRoute(route, 'POST', {
+      token,
+      params: { id: project._id.toString() },
+      body: {},
     });
 
-    const res = await POST(req, { params: Promise.resolve({ id: project._id.toString() }) });
-    expect(res.status).toBe(400);
+    expect(status).toBe(400);
   });
 });
 
@@ -58,19 +55,16 @@ describe('GET /api/v1/projects/:id/tasks', () => {
     await createTask(project._id.toString(), { title: 'T1', priority: 'P0' });
     await createTask(project._id.toString(), { title: 'T2', priority: 'P3' });
 
-    const { GET } = await import('@/app/api/v1/projects/[id]/tasks/route');
-    const url = new URL('http://localhost/api/v1/projects/test/tasks?priority=P0');
-    const req = new Request(url, {
-      headers: { Authorization: `Bearer ${token}` },
+    const route = await import('@/app/api/v1/projects/[id]/tasks/route');
+    const { status, body } = await callRoute(route, 'GET', {
+      token,
+      params: { id: project._id.toString() },
+      query: { priority: 'P0' },
     });
-    Object.defineProperty(req, 'nextUrl', { value: url });
 
-    const res = await GET(req, { params: Promise.resolve({ id: project._id.toString() }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.data.tasks).toHaveLength(1);
-    expect(json.data.tasks[0].priority).toBe('P0');
+    expect(status).toBe(200);
+    expect(body.data.tasks).toHaveLength(1);
+    expect(body.data.tasks[0].priority).toBe('P0');
   });
 
   it('lists all tasks when no filter', async () => {
@@ -79,19 +73,15 @@ describe('GET /api/v1/projects/:id/tasks', () => {
     await createTask(project._id.toString(), { title: 'T1' });
     await createTask(project._id.toString(), { title: 'T2' });
 
-    const { GET } = await import('@/app/api/v1/projects/[id]/tasks/route');
-    const url = new URL('http://localhost/api/v1/projects/test/tasks');
-    const req = new Request(url, {
-      headers: { Authorization: `Bearer ${token}` },
+    const route = await import('@/app/api/v1/projects/[id]/tasks/route');
+    const { status, body } = await callRoute(route, 'GET', {
+      token,
+      params: { id: project._id.toString() },
     });
-    Object.defineProperty(req, 'nextUrl', { value: url });
 
-    const res = await GET(req, { params: Promise.resolve({ id: project._id.toString() }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.data.tasks).toHaveLength(2);
-    expect(json.data.total).toBe(2);
+    expect(status).toBe(200);
+    expect(body.data.tasks).toHaveLength(2);
+    expect(body.data.total).toBe(2);
   });
 });
 
@@ -101,16 +91,14 @@ describe('GET /api/v1/tasks/:id', () => {
     const project = await createProject(user._id.toString());
     const task = await createTask(project._id.toString(), { title: 'My Task' });
 
-    const { GET } = await import('@/app/api/v1/tasks/[id]/route');
-    const req = new Request('http://localhost/api/v1/tasks/test', {
-      headers: { Authorization: `Bearer ${token}` },
+    const route = await import('@/app/api/v1/tasks/[id]/route');
+    const { status, body } = await callRoute(route, 'GET', {
+      token,
+      params: { id: task._id.toString() },
     });
 
-    const res = await GET(req, { params: Promise.resolve({ id: task._id.toString() }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.data.title).toBe('My Task');
+    expect(status).toBe(200);
+    expect(body.data.title).toBe('My Task');
   });
 });
 
@@ -120,19 +108,16 @@ describe('PATCH /api/v1/tasks/:id', () => {
     const project = await createProject(user._id.toString());
     const task = await createTask(project._id.toString());
 
-    const { PATCH } = await import('@/app/api/v1/tasks/[id]/route');
-    const req = new Request('http://localhost/api/v1/tasks/test', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ title: 'Updated Task', priority: 'P1' }),
+    const route = await import('@/app/api/v1/tasks/[id]/route');
+    const { status, body } = await callRoute(route, 'PATCH', {
+      token,
+      params: { id: task._id.toString() },
+      body: { title: 'Updated Task', priority: 'P1' },
     });
 
-    const res = await PATCH(req, { params: Promise.resolve({ id: task._id.toString() }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.data.title).toBe('Updated Task');
-    expect(json.data.priority).toBe('P1');
+    expect(status).toBe(200);
+    expect(body.data.title).toBe('Updated Task');
+    expect(body.data.priority).toBe('P1');
   });
 });
 
@@ -142,18 +127,15 @@ describe('PATCH /api/v1/tasks/:id/status', () => {
     const project = await createProject(user._id.toString());
     const task = await createTask(project._id.toString(), { status: 'backlog' });
 
-    const { PATCH } = await import('@/app/api/v1/tasks/[id]/status/route');
-    const req = new Request('http://localhost/api/v1/tasks/test/status', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status: 'in_progress' }),
+    const route = await import('@/app/api/v1/tasks/[id]/status/route');
+    const { status, body } = await callRoute(route, 'PATCH', {
+      token,
+      params: { id: task._id.toString() },
+      body: { status: 'in_progress' },
     });
 
-    const res = await PATCH(req, { params: Promise.resolve({ id: task._id.toString() }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.data.status).toBe('in_progress');
+    expect(status).toBe(200);
+    expect(body.data.status).toBe('in_progress');
   });
 });
 
@@ -164,21 +146,17 @@ describe('PATCH /api/v1/tasks/bulk', () => {
     const t1 = await createTask(project._id.toString());
     const t2 = await createTask(project._id.toString());
 
-    const { PATCH } = await import('@/app/api/v1/tasks/bulk/route');
-    const req = new Request('http://localhost/api/v1/tasks/bulk', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
+    const route = await import('@/app/api/v1/tasks/bulk/route');
+    const { status, body } = await callRoute(route, 'PATCH', {
+      token,
+      body: {
         taskIds: [t1._id.toString(), t2._id.toString()],
         update: { priority: 'P0' },
-      }),
+      },
     });
 
-    const res = await PATCH(req, { params: Promise.resolve({}) });
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.data.modifiedCount).toBe(2);
+    expect(status).toBe(200);
+    expect(body.data.modifiedCount).toBe(2);
   });
 });
 
@@ -188,13 +166,12 @@ describe('DELETE /api/v1/tasks/:id', () => {
     const project = await createProject(user._id.toString());
     const task = await createTask(project._id.toString());
 
-    const { DELETE } = await import('@/app/api/v1/tasks/[id]/route');
-    const req = new Request('http://localhost/api/v1/tasks/test', {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
+    const route = await import('@/app/api/v1/tasks/[id]/route');
+    const { status } = await callRoute(route, 'DELETE', {
+      token,
+      params: { id: task._id.toString() },
     });
 
-    const res = await DELETE(req, { params: Promise.resolve({ id: task._id.toString() }) });
-    expect(res.status).toBe(200);
+    expect(status).toBe(200);
   });
 });

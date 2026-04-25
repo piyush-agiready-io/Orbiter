@@ -2,14 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, SignOut, Gear } from '@phosphor-icons/react';
+import { Bell, SignOut, Gear, List } from '@phosphor-icons/react';
 import Avatar from 'boring-avatars';
 import { useAuth } from '@/hooks/use-auth';
 import { useUnreadCount } from '@/hooks/queries/use-notifications';
 import { NotificationDropdown } from '@/components/features/notifications/notification-dropdown';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 
-export function Topbar() {
+export function Topbar({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const { user, clearAuth } = useAuth();
   const router = useRouter();
   const { data: unreadData } = useUnreadCount();
@@ -41,10 +41,20 @@ export function Topbar() {
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-subtle bg-surface px-6">
-      <h1 className="text-base font-semibold tracking-tight text-primary">
-        Projects
-      </h1>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-subtle bg-surface px-4 md:px-6">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onMenuToggle}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-secondary transition-colors hover:bg-subtle md:hidden"
+          aria-label="Toggle menu"
+        >
+          <List size={20} />
+        </button>
+        <h1 className="text-base font-semibold tracking-tight text-primary">
+          Projects
+        </h1>
+      </div>
 
       <div className="flex items-center gap-3">
         <ThemeToggle />

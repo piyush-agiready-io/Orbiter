@@ -1,18 +1,20 @@
 import { GitHubSyncAgent } from '@/modules/ai/agents/github-sync.agent';
 import { GitHubService } from '@/modules/github/github.service';
-import { resolveApiKey } from '@/modules/ai/resolve-api-key';
+import { resolveOrgApiKey } from '@/modules/ai/resolve-org-api-key';
 import { CodexClient } from '@/modules/ai/codex-client';
 import { StatusUpdateAgent } from '@/modules/ai/agents/status-update.agent';
 
 jest.mock('@/modules/github/github.service', () => ({
   GitHubService: {
     fetchCommitsForProject: jest.fn(),
+    fetchPRsForProject: jest.fn(),
     storeSync: jest.fn(),
     getLastSyncTime: jest.fn(),
+    getSyncHistory: jest.fn(),
   },
 }));
-jest.mock('@/modules/ai/resolve-api-key', () => ({
-  resolveApiKey: jest.fn(),
+jest.mock('@/modules/ai/resolve-org-api-key', () => ({
+  resolveOrgApiKey: jest.fn(),
 }));
 jest.mock('@/modules/ai/codex-client', () => ({
   CodexClient: { complete: jest.fn() },
@@ -25,7 +27,7 @@ jest.mock('@/modules/notifications/notification.service', () => ({
 }));
 
 const mockedGitHubService = jest.mocked(GitHubService);
-const mockedResolveApiKey = jest.mocked(resolveApiKey);
+const mockedResolveOrgApiKey = jest.mocked(resolveOrgApiKey);
 const mockedCodexClient = jest.mocked(CodexClient);
 const mockedStatusUpdateAgent = jest.mocked(StatusUpdateAgent);
 
@@ -37,11 +39,16 @@ describe('GitHubSyncAgent', () => {
       { sha: 'a1', message: 'feat: add auth', author: 'Dev', repo: 'o/r', branch: 'main', date: new Date() },
       { sha: 'a2', message: 'fix: resolve bug', author: 'Dev', repo: 'o/r', branch: 'main', date: new Date() },
     ];
+    const prs = [
+      { number: 1, title: 'Add auth', state: 'merged', author: 'Dev', additions: 100, deletions: 10, url: '' },
+    ];
 
     mockedGitHubService.getLastSyncTime.mockResolvedValue(null);
     mockedGitHubService.fetchCommitsForProject.mockResolvedValue(commits);
+    mockedGitHubService.fetchPRsForProject.mockResolvedValue(prs);
     mockedGitHubService.storeSync.mockResolvedValue({ _id: 'sync1' });
-    mockedResolveApiKey.mockResolvedValue({ token: 'tk', accountId: 'acct', source: 'oauth' });
+    mockedGitHubService.getSyncHistory.mockResolvedValue([]);
+    mockedResolveOrgApiKey.mockResolvedValue({ token: 'tk', accountId: 'acct' });
     mockedCodexClient.complete.mockResolvedValue('Added authentication and fixed a bug.');
     mockedStatusUpdateAgent.processBatch.mockResolvedValue([]);
 
@@ -53,6 +60,7 @@ describe('GitHubSyncAgent', () => {
     );
 
     expect(result.commitCount).toBe(2);
+    expect(result.prCount).toBe(1);
     expect(result.summary).toBe('Added authentication and fixed a bug.');
     expect(mockedGitHubService.storeSync).toHaveBeenCalled();
     expect(mockedStatusUpdateAgent.processBatch).toHaveBeenCalledWith('proj1', commits);
@@ -65,8 +73,10 @@ describe('GitHubSyncAgent', () => {
 
     mockedGitHubService.getLastSyncTime.mockResolvedValue(null);
     mockedGitHubService.fetchCommitsForProject.mockResolvedValue(commits);
+    mockedGitHubService.fetchPRsForProject.mockResolvedValue([]);
     mockedGitHubService.storeSync.mockResolvedValue({ _id: 'sync2' });
-    mockedResolveApiKey.mockResolvedValue(null);
+    mockedGitHubService.getSyncHistory.mockResolvedValue([]);
+    mockedResolveOrgApiKey.mockResolvedValue(null);
     mockedStatusUpdateAgent.processBatch.mockResolvedValue([]);
 
     const result = await GitHubSyncAgent.syncProject(
@@ -80,9 +90,10 @@ describe('GitHubSyncAgent', () => {
     expect(result.summary).toBeUndefined();
   });
 
-  it('returns zero commits when no new commits found', async () => {
+  it('returns zero counts when no new activity found', async () => {
     mockedGitHubService.getLastSyncTime.mockResolvedValue(new Date());
     mockedGitHubService.fetchCommitsForProject.mockResolvedValue([]);
+    mockedGitHubService.fetchPRsForProject.mockResolvedValue([]);
 
     const result = await GitHubSyncAgent.syncProject(
       'proj1',
@@ -92,6 +103,7 @@ describe('GitHubSyncAgent', () => {
     );
 
     expect(result.commitCount).toBe(0);
+    expect(result.prCount).toBe(0);
     expect(mockedGitHubService.storeSync).not.toHaveBeenCalled();
   });
 });

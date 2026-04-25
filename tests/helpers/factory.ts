@@ -11,6 +11,7 @@ import { Doc } from '@/modules/docs/doc.model';
 import { Link } from '@/modules/links/link.model';
 import { EnvVariable } from '@/modules/env-variables/env-variable.model';
 import { AuditLog } from '@/modules/audit-logs/audit-log.model';
+import { Activity } from '@/modules/activity/activity.model';
 import { encrypt } from '@/shared/lib/encryption';
 import type { Role } from '@/shared/utils/constants';
 
@@ -168,6 +169,17 @@ export async function createAuditLog(projectId: string, userId: string, override
     environment: 'dev',
   };
   return AuditLog.create({ ...defaults, ...overrides });
+}
+
+export async function createActivity(projectId: string, userId: string, overrides: Record<string, unknown> = {}) {
+  const defaults = {
+    project: projectId,
+    actor: userId,
+    action: 'task_created',
+    targetType: 'task',
+    targetTitle: 'Test Task',
+  };
+  return Activity.create({ ...defaults, ...overrides });
 }
 
 export { DEFAULT_PASSWORD };

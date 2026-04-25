@@ -5,6 +5,7 @@ const config: Config = {
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
   moduleNameMapper: {
+    '^@/shared/database/connection$': '<rootDir>/tests/__mocks__/database-connection.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^next/server$': '<rootDir>/tests/__mocks__/next-server.ts',
   },

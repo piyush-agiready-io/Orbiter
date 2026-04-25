@@ -2,6 +2,7 @@ import { apiHandler } from '@/shared/middleware/api-handler';
 import { requireRole } from '@/shared/middleware/role-guard';
 import { checkProjectAccess } from '@/shared/middleware/project-access';
 import { SprintService } from '@/modules/sprints/sprint.service';
+import { ActivityService } from '@/modules/activity/activity.service';
 import { createSprintSchema, sprintQuerySchema } from '@/modules/sprints/sprint.validator';
 import type { CreateSprintInput } from '@/modules/sprints/sprint.validator';
 
@@ -29,6 +30,11 @@ export const POST = apiHandler({
     await checkProjectAccess(ctx.params.id, ctx.user.userId, ctx.user.role);
     const body = ctx.body as CreateSprintInput;
     const sprint = await SprintService.create(ctx.params.id, body);
+    ActivityService.log({
+      project: ctx.params.id, actor: ctx.user.userId,
+      action: 'sprint_created', targetType: 'sprint',
+      targetId: sprint._id.toString(), targetTitle: sprint.name,
+    }).catch(() => {});
     return { data: sprint.toJSON(), status: 201 };
   },
 });

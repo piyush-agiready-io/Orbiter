@@ -1,11 +1,9 @@
 import { SprintAssignmentAgent } from '@/modules/ai/agents/sprint-assignment.agent';
-import { resolveApiKey } from '@/modules/ai/resolve-api-key';
+import { resolveOrgApiKey } from '@/modules/ai/resolve-org-api-key';
 import { CodexClient } from '@/modules/ai/codex-client';
-import { SprintService } from '@/modules/sprints/sprint.service';
-import { UserService } from '@/modules/users/user.service';
 
-jest.mock('@/modules/ai/resolve-api-key', () => ({
-  resolveApiKey: jest.fn(),
+jest.mock('@/modules/ai/resolve-org-api-key', () => ({
+  resolveOrgApiKey: jest.fn(),
 }));
 jest.mock('@/modules/ai/codex-client', () => ({
   CodexClient: { complete: jest.fn() },
@@ -22,24 +20,27 @@ jest.mock('@/modules/users/user.service', () => ({
   },
 }));
 
-const mockedResolveApiKey = jest.mocked(resolveApiKey);
+const mockedResolveOrgApiKey = jest.mocked(resolveOrgApiKey);
 const mockedCodexClient = jest.mocked(CodexClient);
-const mockedSprintService = jest.mocked(SprintService);
-const mockedUserService = jest.mocked(UserService);
 
 describe('SprintAssignmentAgent', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('returns sprint and assignee suggestion from ChatGPT', async () => {
-    mockedResolveApiKey.mockResolvedValue({ token: 'tk', accountId: 'acct', source: 'oauth' });
+    const { SprintService } = await import('@/modules/sprints/sprint.service');
+    const { UserService } = await import('@/modules/users/user.service');
+    const mockedSprintService = jest.mocked(SprintService);
+    const mockedUserService = jest.mocked(UserService);
+
+    mockedResolveOrgApiKey.mockResolvedValue({ token: 'tk', accountId: 'acct' });
     mockedSprintService.getActiveSprint.mockResolvedValue({ _id: 'sprint1', name: 'Sprint 5' });
     mockedSprintService.getTaskCountPerMember.mockResolvedValue([
       { userId: 'u1', name: 'Alice', count: 3 },
       { userId: 'u2', name: 'Bob', count: 7 },
     ]);
     mockedUserService.getProjectMembers.mockResolvedValue([
-      { _id: 'u1', name: 'Alice', skills: ['frontend', 'react'] },
-      { _id: 'u2', name: 'Bob', skills: ['backend', 'node'] },
+      { _id: { toString: () => 'u1' }, name: 'Alice', skills: ['frontend', 'react'] },
+      { _id: { toString: () => 'u2' }, name: 'Bob', skills: ['backend', 'node'] },
     ]);
     mockedCodexClient.complete.mockResolvedValue(JSON.stringify({
       sprintId: 'sprint1',
@@ -56,11 +57,12 @@ describe('SprintAssignmentAgent', () => {
     expect(result).not.toBeNull();
     expect(result!.sprintId).toBe('sprint1');
     expect(result!.assigneeId).toBe('u1');
+    expect(result!.assigneeName).toBe('Alice');
     expect(result!.reason).toContain('Alice');
   });
 
   it('returns null when ChatGPT is unavailable', async () => {
-    mockedResolveApiKey.mockResolvedValue(null);
+    mockedResolveOrgApiKey.mockResolvedValue(null);
 
     const result = await SprintAssignmentAgent.suggest(
       'user1',
@@ -72,7 +74,10 @@ describe('SprintAssignmentAgent', () => {
   });
 
   it('returns null when no active sprint exists', async () => {
-    mockedResolveApiKey.mockResolvedValue({ token: 'tk', accountId: 'acct', source: 'oauth' });
+    const { SprintService } = await import('@/modules/sprints/sprint.service');
+    const mockedSprintService = jest.mocked(SprintService);
+
+    mockedResolveOrgApiKey.mockResolvedValue({ token: 'tk', accountId: 'acct' });
     mockedSprintService.getActiveSprint.mockResolvedValue(null);
 
     const result = await SprintAssignmentAgent.suggest(

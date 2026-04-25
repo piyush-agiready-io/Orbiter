@@ -1,6 +1,7 @@
 import { apiHandler } from '@/shared/middleware/api-handler';
 import { checkProjectAccess } from '@/shared/middleware/project-access';
 import { BugService } from '@/modules/bugs/bug.service';
+import { ActivityService } from '@/modules/activity/activity.service';
 import {
   createBugSchema,
   queryBugsSchema,
@@ -30,6 +31,11 @@ export const POST = apiHandler({
     await checkProjectAccess(ctx.params.id, ctx.user.userId, ctx.user.role);
     const body = ctx.body as CreateBugInput;
     const bug = await BugService.create(ctx.params.id, body, ctx.user.userId);
+    ActivityService.log({
+      project: ctx.params.id, actor: ctx.user.userId,
+      action: 'bug_created', targetType: 'bug',
+      targetId: bug._id.toString(), targetTitle: bug.title,
+    }).catch(() => {});
     return { data: bug.toJSON(), status: 201 };
   },
 });

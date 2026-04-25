@@ -19,7 +19,12 @@ import { useAuth } from '@/hooks/use-auth';
 
 const PROJECT_DOT_COLORS = ['bg-accent', 'bg-success', 'bg-warning', 'bg-info'];
 
-export function DashboardSidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function DashboardSidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { data } = useProjects();
   const { user } = useAuth();
@@ -39,10 +44,18 @@ export function DashboardSidebar() {
     .map((id) => projectMap.get(id))
     .filter((p): p is { id: string; name: string } => Boolean(p));
 
+  const handleNavClick = () => {
+    onClose?.();
+  };
+
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-subtle bg-surface p-4">
+    <aside
+      className={`fixed inset-y-0 left-0 z-50 flex w-60 shrink-0 flex-col border-r border-subtle bg-surface p-4 transition-transform duration-200 ease-out md:static md:translate-x-0 ${
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 px-3 py-1.5 transition-colors duration-[120ms] hover:opacity-80">
+      <Link href="/" onClick={handleNavClick} className="flex items-center gap-2 px-3 py-1.5 transition-colors duration-[120ms] hover:opacity-80">
         <div className="flex h-4 w-4 items-center justify-center rounded-sm bg-accent text-[10px] font-bold leading-none text-[var(--color-text-inverse)]">
           O
         </div>
@@ -65,6 +78,7 @@ export function DashboardSidebar() {
       <div className="mt-3">
         <Link
           href="/my-work"
+          onClick={handleNavClick}
           className={`flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors duration-[120ms] ease-[ease] ${
             pathname === '/my-work'
               ? 'bg-muted font-medium text-primary'
