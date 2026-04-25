@@ -1,7 +1,11 @@
 'use client';
 
 import { startOfDay } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { Sparkle } from '@phosphor-icons/react';
 import { useMyTasks } from '@/hooks/queries/use-my-tasks';
+import { useAuth } from '@/hooks/use-auth';
+import { api } from '@/shared/lib/api-client';
 import { MyWorkGroup } from '@/components/features/my-work/my-work-group';
 import type { MyWorkTask } from '@/components/features/my-work/my-work-task-row';
 import type { TaskPriority } from '@/modules/tasks/task.types';
@@ -64,14 +68,33 @@ function groupTasks(tasks: MyWorkTask[]) {
 
 export default function MyWorkPage() {
   const { data, isLoading, error } = useMyTasks();
+  const isAuthenticated = useAuth((s) => s.isAuthenticated);
 
   const tasks = (data as MyWorkTask[] | undefined) ?? [];
   const groups = groupTasks(tasks);
   const totalTasks = tasks.length;
 
+  const { data: summaryData } = useQuery({
+    queryKey: ['my-work-summary'],
+    queryFn: () => api.get<{ summary: string | null }>('/tasks/my/summary'),
+    enabled: isAuthenticated && tasks.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+  const aiSummary = (summaryData as { summary?: string | null })?.summary;
+
   return (
     <div className="p-6">
       <h1 className="text-xl font-semibold tracking-tight text-primary">My Work</h1>
+
+      {aiSummary && (
+        <div className="mt-4 mb-2 rounded-lg border border-subtle bg-surface p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkle size={16} weight="fill" className="text-accent" />
+            <h3 className="text-sm font-semibold text-primary">Today&apos;s Focus</h3>
+          </div>
+          <p className="text-sm text-secondary leading-relaxed">{aiSummary}</p>
+        </div>
+      )}
 
       {isLoading && (
         <div className="mt-8 flex items-center justify-center">

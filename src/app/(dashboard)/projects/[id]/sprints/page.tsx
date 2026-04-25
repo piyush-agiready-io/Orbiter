@@ -6,6 +6,7 @@ import { SprintList } from '@/components/features/sprints/sprint-list';
 import { SprintBoard } from '@/components/features/sprints/sprint-board';
 import { SprintCloseDialog } from '@/components/features/sprints/sprint-close-dialog';
 import { SprintForm } from '@/components/features/sprints/sprint-form';
+import { SprintAiSuggestions } from '@/components/features/sprints/sprint-ai-suggestions';
 import { TaskDetailPanel } from '@/components/features/tasks/task-detail-panel';
 import type { ITask } from '@/modules/tasks/task.types';
 
@@ -40,6 +41,7 @@ export default function SprintsPage() {
 
   return (
     <>
+      <SprintAiSuggestions projectId={params.id} />
       <SprintList
         projectId={params.id}
         onSelect={setSelectedSprintId}

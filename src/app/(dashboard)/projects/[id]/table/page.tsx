@@ -6,25 +6,10 @@ import { format } from 'date-fns';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { BulkActionsBar } from '@/components/features/table/bulk-actions-bar';
 import { TaskDetailPanel } from '@/components/features/tasks/task-detail-panel';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useTasks, useBulkUpdateTasks, useDeleteTask } from '@/hooks/queries/use-tasks';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTasks, useUpdateTask, useBulkUpdateTasks, useDeleteTask } from '@/hooks/queries/use-tasks';
 import type { ITask } from '@/modules/tasks/task.types';
-
-const PRIORITY_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  P0: 'destructive',
-  P1: 'default',
-  P2: 'secondary',
-  P3: 'outline',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  backlog: 'Backlog',
-  todo: 'Todo',
-  in_progress: 'In Progress',
-  review: 'Review',
-  done: 'Done',
-};
 
 export default function TablePage() {
   const params = useParams<{ id: string }>();
@@ -38,6 +23,7 @@ export default function TablePage() {
   const { data, isLoading } = useTasks(projectId);
   const tasks = data?.tasks ?? [];
 
+  const updateTask = useUpdateTask(projectId);
   const bulkUpdate = useBulkUpdateTasks(projectId);
   const deleteTask = useDeleteTask(projectId);
 
@@ -53,21 +39,52 @@ export default function TablePage() {
     {
       key: 'priority',
       header: 'Priority',
-      width: '100px',
+      width: '120px',
       render: (task) => (
-        <Badge variant={PRIORITY_VARIANT[task.priority] ?? 'secondary'}>
-          {task.priority}
-        </Badge>
+        <Select
+          value={task.priority}
+          onValueChange={(v) => v && updateTask.mutate({ taskId: task.id, data: { priority: v } })}
+        >
+          <SelectTrigger
+            size="sm"
+            className="h-7 border-0 bg-transparent text-xs"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="P0">P0</SelectItem>
+            <SelectItem value="P1">P1</SelectItem>
+            <SelectItem value="P2">P2</SelectItem>
+            <SelectItem value="P3">P3</SelectItem>
+          </SelectContent>
+        </Select>
       ),
     },
     {
       key: 'status',
       header: 'Status',
-      width: '120px',
+      width: '140px',
       render: (task) => (
-        <Badge variant="secondary">
-          {STATUS_LABELS[task.status] ?? task.status}
-        </Badge>
+        <Select
+          value={task.status}
+          onValueChange={(v) => v && updateTask.mutate({ taskId: task.id, data: { status: v } })}
+        >
+          <SelectTrigger
+            size="sm"
+            className="h-7 border-0 bg-transparent text-xs"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="backlog">Backlog</SelectItem>
+            <SelectItem value="todo">Todo</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="review">Review</SelectItem>
+            <SelectItem value="done">Done</SelectItem>
+          </SelectContent>
+        </Select>
       ),
     },
     {

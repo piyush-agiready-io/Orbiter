@@ -4,12 +4,15 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { Plus, FolderSimple, Users } from '@phosphor-icons/react';
 import Avatar from 'boring-avatars';
+import { useQuery } from '@tanstack/react-query';
 import { useProjects, useCreateProject } from '@/hooks/queries/use-projects';
 import { useAuth } from '@/hooks/use-auth';
+import { api } from '@/shared/lib/api-client';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ProjectStats } from '@/components/features/dashboard/project-stats';
 import { useState } from 'react';
 
 interface Project {
@@ -23,6 +26,13 @@ interface Project {
   clients: string[];
   updatedAt: string;
   createdAt: string;
+}
+
+interface ProjectTaskStats {
+  projectId: string;
+  taskCount: number;
+  doneCount: number;
+  activeCount: number;
 }
 
 const AVATAR_COLORS = ['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9'];
@@ -52,9 +62,18 @@ export default function DashboardPage() {
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
 
+  const isAuthenticated = useAuth((s) => s.isAuthenticated);
   const canCreate = user?.role === 'admin' || user?.role === 'internal';
   const projectData = data as { projects?: Project[]; total?: number } | undefined;
   const projects = projectData?.projects ?? [];
+
+  const { data: statsData } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => api.get<Record<string, ProjectTaskStats>>('/dashboard/stats'),
+    enabled: isAuthenticated && projects.length > 0,
+    staleTime: 60 * 1000,
+  });
+  const projectStats = statsData as Record<string, ProjectTaskStats> | undefined;
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -219,6 +238,13 @@ export default function DashboardPage() {
                       </p>
                     ) : (
                       <p className="text-sm text-muted italic">No description</p>
+                    )}
+                    {projectStats?.[project.id] && (
+                      <ProjectStats
+                        taskCount={projectStats[project.id].taskCount}
+                        doneCount={projectStats[project.id].doneCount}
+                        activeCount={projectStats[project.id].activeCount}
+                      />
                     )}
                   </CardContent>
                   <CardFooter className="flex items-center justify-between gap-3">

@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/select';
 import { useTask, useUpdateTask } from '@/hooks/queries/use-tasks';
 import { format } from 'date-fns';
+import { CommentList } from '@/components/features/comments/comment-list';
+import { CommentInput } from '@/components/features/comments/comment-input';
 
 interface TaskDetailPanelProps {
   taskId: string;
@@ -133,6 +135,14 @@ export function TaskDetailPanel({ taskId, projectId, onClose }: TaskDetailPanelP
           <span className="text-xs text-[var(--color-text-muted)]">
             Created {format(new Date(task.createdAt), 'MMM d, yyyy')}
           </span>
+        </div>
+
+        <div className="border-t border-[var(--color-border-subtle)] pt-4">
+          <h4 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)] mb-3">Comments</h4>
+          <CommentList projectId={projectId} parentType="task" parentId={taskId} />
+          <div className="mt-3">
+            <CommentInput projectId={projectId} parentType="task" parentId={taskId} />
+          </div>
         </div>
       </div>
     </div>
