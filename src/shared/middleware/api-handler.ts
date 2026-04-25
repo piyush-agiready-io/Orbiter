@@ -139,7 +139,7 @@ function handleError(error: unknown): NextResponse {
     );
   }
 
-  console.error('Unhandled error:', error);
+  console.error('Unhandled error:', error instanceof Error ? `${error.name}: ${error.message}` : error);
   return NextResponse.json(
     apiError('INTERNAL_ERROR', 'An unexpected error occurred'),
     { status: ERROR_STATUS_MAP.INTERNAL_ERROR },
