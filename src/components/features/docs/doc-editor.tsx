@@ -101,9 +101,9 @@ function createMentionSuggestion(users: { id: string; name: string }[]) {
       }
 
       return {
-        onStart: (props: { clientRect: (() => DOMRect | null) | null; items: { id: string; name: string }[]; command: (item: { id: string; name: string }) => void }) => {
-          items = props.items;
-          commandFn = props.command;
+        onStart: (props: Record<string, unknown>) => {
+          items = (props.items ?? []) as { id: string; name: string }[];
+          commandFn = props.command as (item: { id: string; name: string }) => void;
           selectedIndex = 0;
 
           popup = document.createElement('div');
@@ -111,19 +111,21 @@ function createMentionSuggestion(users: { id: string; name: string }[]) {
           document.body.appendChild(popup);
           updatePopup();
 
-          const rect = props.clientRect?.();
+          const rectFn = props.clientRect as (() => DOMRect | null) | undefined;
+          const rect = rectFn?.();
           if (rect && popup) {
             popup.style.top = `${rect.bottom + window.scrollY + 4}px`;
             popup.style.left = `${rect.left + window.scrollX}px`;
           }
         },
-        onUpdate: (props: { clientRect: (() => DOMRect | null) | null; items: { id: string; name: string }[]; command: (item: { id: string; name: string }) => void }) => {
-          items = props.items;
-          commandFn = props.command;
+        onUpdate: (props: Record<string, unknown>) => {
+          items = (props.items ?? []) as { id: string; name: string }[];
+          commandFn = props.command as (item: { id: string; name: string }) => void;
           selectedIndex = 0;
           updatePopup();
 
-          const rect = props.clientRect?.();
+          const rectFn = props.clientRect as (() => DOMRect | null) | undefined;
+          const rect = rectFn?.();
           if (rect && popup) {
             popup.style.top = `${rect.bottom + window.scrollY + 4}px`;
             popup.style.left = `${rect.left + window.scrollX}px`;
