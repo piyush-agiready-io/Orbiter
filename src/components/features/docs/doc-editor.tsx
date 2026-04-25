@@ -70,7 +70,8 @@ function MenuBar({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
   );
 }
 
-function createMentionSuggestion(users: { id: string; name: string }[]) {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function createMentionSuggestion(users: { id: string; name: string }[]): any {
   return {
     items: ({ query }: { query: string }) => {
       return users
@@ -101,66 +102,44 @@ function createMentionSuggestion(users: { id: string; name: string }[]) {
       }
 
       return {
-        onStart: (props: Record<string, unknown>) => {
-          items = (props.items ?? []) as { id: string; name: string }[];
-          commandFn = props.command as (item: { id: string; name: string }) => void;
+        onStart: (props: any) => {
+          items = props.items ?? [];
+          commandFn = props.command;
           selectedIndex = 0;
-
           popup = document.createElement('div');
           popup.className = 'mention-popup';
           document.body.appendChild(popup);
           updatePopup();
-
-          const rectFn = props.clientRect as (() => DOMRect | null) | undefined;
-          const rect = rectFn?.();
+          const rect = props.clientRect?.();
           if (rect && popup) {
             popup.style.top = `${rect.bottom + window.scrollY + 4}px`;
             popup.style.left = `${rect.left + window.scrollX}px`;
           }
         },
-        onUpdate: (props: Record<string, unknown>) => {
-          items = (props.items ?? []) as { id: string; name: string }[];
-          commandFn = props.command as (item: { id: string; name: string }) => void;
+        onUpdate: (props: any) => {
+          items = props.items ?? [];
+          commandFn = props.command;
           selectedIndex = 0;
           updatePopup();
-
-          const rectFn = props.clientRect as (() => DOMRect | null) | undefined;
-          const rect = rectFn?.();
+          const rect = props.clientRect?.();
           if (rect && popup) {
             popup.style.top = `${rect.bottom + window.scrollY + 4}px`;
             popup.style.left = `${rect.left + window.scrollX}px`;
           }
         },
-        onKeyDown: (props: { event: KeyboardEvent }) => {
-          if (props.event.key === 'ArrowDown') {
-            selectedIndex = (selectedIndex + 1) % items.length;
-            updatePopup();
-            return true;
-          }
-          if (props.event.key === 'ArrowUp') {
-            selectedIndex = (selectedIndex - 1 + items.length) % items.length;
-            updatePopup();
-            return true;
-          }
-          if (props.event.key === 'Enter') {
-            if (commandFn && items[selectedIndex]) commandFn(items[selectedIndex]);
-            return true;
-          }
-          if (props.event.key === 'Escape') {
-            popup?.remove();
-            popup = null;
-            return true;
-          }
+        onKeyDown: (props: any) => {
+          if (props.event.key === 'ArrowDown') { selectedIndex = (selectedIndex + 1) % items.length; updatePopup(); return true; }
+          if (props.event.key === 'ArrowUp') { selectedIndex = (selectedIndex - 1 + items.length) % items.length; updatePopup(); return true; }
+          if (props.event.key === 'Enter') { if (commandFn && items[selectedIndex]) commandFn(items[selectedIndex]); return true; }
+          if (props.event.key === 'Escape') { popup?.remove(); popup = null; return true; }
           return false;
         },
-        onExit: () => {
-          popup?.remove();
-          popup = null;
-        },
+        onExit: () => { popup?.remove(); popup = null; },
       };
     },
   };
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export function DocEditor({ content, onChange, editable = true, mentionUsers = [] }: DocEditorProps) {
   const editor = useEditor({
