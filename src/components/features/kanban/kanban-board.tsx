@@ -190,6 +190,7 @@ export function KanbanBoard({
             id={col.id}
             title={col.title}
             tasks={col.tasks}
+            projectId={projectId}
             isLoading={isLoading}
             onTaskClick={onTaskClick}
             onAddTask={onAddTask}
@@ -201,7 +202,7 @@ export function KanbanBoard({
       <DragOverlay>
         {activeTask ? (
           <div className="rotate-[2deg]">
-            <KanbanCard task={activeTask} />
+            <KanbanCard task={activeTask} projectId={projectId} />
           </div>
         ) : null}
       </DragOverlay>

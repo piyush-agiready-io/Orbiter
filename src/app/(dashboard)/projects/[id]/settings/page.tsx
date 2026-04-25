@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import Avatar from 'boring-avatars';
 import { toast } from 'sonner';
 import { InfoTip } from '@/components/shared/info-tip';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 
 const updateSchema = z.object({
   name: z.string().min(2).max(100),
@@ -77,6 +78,7 @@ export default function ProjectSettingsPage() {
   const [saved, setSaved] = useState(false);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [removingMember, setRemovingMember] = useState<{ id: string; name: string; role: string } | null>(null);
 
   const project = data as ProjectData | undefined;
   const isAdmin = currentUser?.role === 'admin';
@@ -228,11 +230,7 @@ export default function ProjectSettingsPage() {
                   ? 'bg-[var(--color-info-muted)] text-[var(--color-info)]'
                   : 'bg-[var(--color-success-muted)] text-[var(--color-success)]'
                 }
-                onRemove={isAdmin ? () => {
-                  if (confirm(`Remove ${member.name} from this project?`)) {
-                    removeMember.mutate({ userId: id, role: member.projectRole });
-                  }
-                } : undefined}
+                onRemove={isAdmin ? () => setRemovingMember({ id, name: member.name, role: member.projectRole }) : undefined}
                 removing={removeMember.isPending}
               />
             );
@@ -305,6 +303,17 @@ export default function ProjectSettingsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!removingMember}
+        onOpenChange={(open) => !open && setRemovingMember(null)}
+        title="Remove member"
+        description={`${removingMember?.name} will lose access to this project.`}
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={() => removingMember && removeMember.mutate({ userId: removingMember.id, role: removingMember.role })}
+        loading={removeMember.isPending}
+      />
     </div>
   );
 }

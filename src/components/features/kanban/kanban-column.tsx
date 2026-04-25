@@ -15,6 +15,7 @@ interface KanbanColumnProps {
   id: string;
   title: string;
   tasks: ITask[];
+  projectId: string;
   isLoading?: boolean;
   onTaskClick?: (task: ITask) => void;
   onAddTask?: (status: string) => void;
@@ -24,6 +25,7 @@ export function KanbanColumn({
   id,
   title,
   tasks,
+  projectId,
   isLoading = false,
   onTaskClick,
   onAddTask,
@@ -69,7 +71,7 @@ export function KanbanColumn({
               ))
             : tasks.length > 0
               ? tasks.map((task) => (
-                  <KanbanCard key={task.id} task={task} onClick={onTaskClick} />
+                  <KanbanCard key={task.id} task={task} projectId={projectId} onClick={onTaskClick} />
                 ))
               : (
                   <p className="py-8 text-center text-xs text-[var(--color-text-disabled)]">

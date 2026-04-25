@@ -33,6 +33,7 @@ import {
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { InfoTip } from '@/components/shared/info-tip';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 
 const ROLE_STYLES: Record<string, string> = {
   admin: 'bg-[var(--color-error-muted)] text-[var(--color-error)]',
@@ -78,6 +79,7 @@ export default function AdminPage() {
   const [role, setRole] = useState<string>('internal');
   const [inviteResult, setInviteResult] = useState<{ inviteToken: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UserItem | null>(null);
 
   if (user?.role !== 'admin') {
     return (
@@ -203,11 +205,7 @@ export default function AdminPage() {
                               variant="ghost"
                               size="icon-sm"
                               className="text-[var(--color-error)] opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => {
-                                if (confirm(`Remove ${u.name} from the team?`)) {
-                                  deactivateUser.mutate(u.id);
-                                }
-                              }}
+                              onClick={() => setDeleteTarget(u)}
                             >
                               <Trash size={16} />
                             </Button>
@@ -292,6 +290,17 @@ export default function AdminPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Remove team member"
+        description={`${deleteTarget?.name} will be removed from the platform and lose access to all projects.`}
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={() => deleteTarget && deactivateUser.mutate(deleteTarget.id)}
+        loading={deactivateUser.isPending}
+      />
     </div>
   );
 }

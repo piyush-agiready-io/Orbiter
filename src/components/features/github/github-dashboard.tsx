@@ -35,6 +35,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { InfoTip } from '@/components/shared/info-tip';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { SyncProgress } from './sync-progress';
 
 interface GitHubDashboardProps {
@@ -57,6 +58,7 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
 
   const [repoSearch, setRepoSearch] = useState('');
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'disconnect' | 'remove' | null>(null);
   const [syncRunning, setSyncRunning] = useState(false);
   const [syncComplete, setSyncComplete] = useState(false);
   const [syncResult, setSyncResult] = useState<{ commitCount?: number; prCount?: number } | undefined>();
@@ -99,9 +101,8 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   };
 
   const handleDisconnect = () => {
-    if (!confirm('Disconnect GitHub? This will remove all linked repos.')) return;
     disconnectGitHub.mutate(undefined, {
-      onSuccess: () => toast.success('GitHub disconnected'),
+      onSuccess: () => { setConfirmAction(null); toast.success('GitHub disconnected'); },
     });
   };
 
@@ -124,12 +125,11 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
     });
   };
 
-  const handleRemoveRepo = (target: GitHubRepo) => {
-    if (!confirm(`Remove ${target.owner}/${target.repo}?`)) return;
-    updateRepos.mutate(
-      githubRepos.filter((r) => !(r.owner === target.owner && r.repo === target.repo)),
-      { onSuccess: () => toast.success(`Removed ${target.owner}/${target.repo}`) },
-    );
+  const handleRemoveRepo = () => {
+    if (!firstRepo) return;
+    updateRepos.mutate([], {
+      onSuccess: () => { setConfirmAction(null); toast.success(`Removed ${firstRepo.owner}/${firstRepo.repo}`); },
+    });
   };
 
   if (isLoading) {
@@ -236,7 +236,7 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={handleDisconnect}>
+          <Button size="sm" variant="outline" onClick={() => setConfirmAction('disconnect')}>
             <SignOut size={14} className="mr-1" /> Disconnect
           </Button>
           <Button size="sm" onClick={handleSync} disabled={syncRunning}>
@@ -266,7 +266,7 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
               <p className="text-xs text-[var(--color-text-muted)]">Auto-syncs every 6 hours</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon-sm" className="text-[var(--color-error)]" onClick={() => handleRemoveRepo(firstRepo)}>
+          <Button variant="ghost" size="icon-sm" className="text-[var(--color-error)]" onClick={() => setConfirmAction('remove')}>
             <Trash size={14} />
           </Button>
         </div>
@@ -405,6 +405,27 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmAction === 'disconnect'}
+        onOpenChange={(open) => !open && setConfirmAction(null)}
+        title="Disconnect GitHub"
+        description="This will remove the GitHub connection and all linked repositories from this project."
+        confirmLabel="Disconnect"
+        variant="danger"
+        onConfirm={handleDisconnect}
+        loading={disconnectGitHub.isPending}
+      />
+      <ConfirmDialog
+        open={confirmAction === 'remove'}
+        onOpenChange={(open) => !open && setConfirmAction(null)}
+        title="Remove repository"
+        description={`${firstRepo?.owner}/${firstRepo?.repo} will be unlinked from this project. Sync history will be preserved.`}
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={handleRemoveRepo}
+        loading={updateRepos.isPending}
+      />
     </div>
   );
 }
