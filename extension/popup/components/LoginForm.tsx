@@ -27,7 +27,7 @@ export function LoginForm({ onLogin, error: externalError }: LoginFormProps) {
   }
 
   function openPlatform() {
-    chrome.tabs.create({ url: `${PLATFORM_URL}/login` });
+    chrome.tabs.create({ url: PLATFORM_URL });
   }
 
   return (
