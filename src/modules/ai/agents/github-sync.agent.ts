@@ -60,7 +60,7 @@ export const GitHubSyncAgent = {
           input: parts.join('\n\n'),
         });
       } catch (error) {
-        console.error('Failed to generate sync summary:', error);
+        console.error('Failed to generate sync summary:', error instanceof Error ? error.message : error);
       }
     }
 

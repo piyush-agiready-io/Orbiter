@@ -41,7 +41,8 @@ export const CodexClient = {
 
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`Codex API request failed (${res.status}): ${body}`);
+      console.error(`Codex API error (${res.status}):`, body.slice(0, 500));
+      throw new Error(`Codex API failed (${res.status}): ${body.slice(0, 200)}`);
     }
 
     const data = await res.json();
