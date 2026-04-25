@@ -8,7 +8,6 @@ export const createTaskSchema = z.object({
   type: z.enum(['feature', 'chore', 'improvement']).default('feature'),
   priority: z.enum(['P0', 'P1', 'P2', 'P3']).default('P2'),
   status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']).default('backlog'),
-  epicId: objectId.optional(),
   sprintId: objectId.optional(),
   assigneeId: objectId.optional(),
   tags: z.array(z.string().trim()).default([]),
@@ -21,7 +20,6 @@ export const updateTaskSchema = z.object({
   type: z.enum(['feature', 'chore', 'improvement']).optional(),
   priority: z.enum(['P0', 'P1', 'P2', 'P3']).optional(),
   status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']).optional(),
-  epicId: objectId.nullable().optional(),
   sprintId: objectId.nullable().optional(),
   assigneeId: objectId.nullable().optional(),
   tags: z.array(z.string().trim()).optional(),
@@ -36,7 +34,6 @@ export const taskQuerySchema = z.object({
   priority: z.enum(['P0', 'P1', 'P2', 'P3']).optional(),
   type: z.enum(['feature', 'chore', 'improvement']).optional(),
   assignee: objectId.optional(),
-  epic: objectId.optional(),
   sprint: objectId.optional(),
   search: z.string().optional(),
   sort: z.enum(['-createdAt', 'createdAt', '-priority', 'priority', '-status', 'status', '-title', 'title', '-updatedAt', 'updatedAt']).default('-createdAt'),
@@ -54,7 +51,6 @@ export const bulkUpdateSchema = z.object({
     priority: z.enum(['P0', 'P1', 'P2', 'P3']).optional(),
     assigneeId: objectId.nullable().optional(),
     sprintId: objectId.nullable().optional(),
-    epicId: objectId.nullable().optional(),
   }),
 });
 

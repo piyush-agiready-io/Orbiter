@@ -2,7 +2,6 @@ import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
 import { User } from '@/modules/users/user.model';
 import { Project } from '@/modules/projects/project.model';
-import { Epic } from '@/modules/epics/epic.model';
 import { Task } from '@/modules/tasks/task.model';
 import { Sprint } from '@/modules/sprints/sprint.model';
 import { Bug } from '@/modules/bugs/bug.model';
@@ -40,21 +39,6 @@ export async function createProject(ownerId: string, overrides: Record<string, u
     githubRepos: [],
   };
   return Project.create({ ...defaults, ...overrides });
-}
-
-export async function createEpic(
-  projectId: string,
-  ownerId: string,
-  overrides: Record<string, unknown> = {},
-) {
-  const defaults = {
-    title: 'Test Epic',
-    project: projectId,
-    owner: ownerId,
-    status: 'planning',
-    progress: 0,
-  };
-  return Epic.create({ ...defaults, ...overrides });
 }
 
 export async function createTask(

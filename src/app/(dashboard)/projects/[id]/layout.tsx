@@ -14,7 +14,6 @@ const TABS = [
   { label: 'Timeline', href: '/timeline' },
   { label: 'Backlog', href: '/backlog' },
   { label: 'Sprints', href: '/sprints' },
-  { label: 'Epics', href: '/epics' },
   { label: 'Bugs', href: '/bugs' },
   { label: 'Docs', href: '/docs' },
   { label: 'Links', href: '/links' },

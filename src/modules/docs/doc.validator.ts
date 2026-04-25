@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const linkedEntitySchema = z.object({
-  type: z.enum(['epic', 'task', 'sprint']),
+  type: z.enum(['task', 'sprint']),
   ref: z.string().min(1),
 });
 

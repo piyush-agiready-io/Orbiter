@@ -7,7 +7,7 @@ import type { CreateTaskInput, UpdateTaskInput, UpdateStatusInput, BulkUpdateInp
 
 export const TaskService = {
   async create(projectId: string, data: CreateTaskInput, userId?: string) {
-    const { epicId, sprintId, assigneeId, ...rest } = data;
+    const { sprintId, assigneeId, ...rest } = data;
     const maxOrder = await Task.findOne({ project: projectId, status: rest.status ?? 'backlog' })
       .sort({ order: -1 })
       .select('order')
@@ -16,7 +16,6 @@ export const TaskService = {
     const task = await Task.create({
       ...rest,
       project: projectId,
-      epic: epicId || undefined,
       sprint: sprintId || undefined,
       assignee: assigneeId || undefined,
       order: (maxOrder?.order ?? -1) + 1,
@@ -43,7 +42,7 @@ export const TaskService = {
     projectId: string,
     query: {
       page?: number; limit?: number; status?: string; priority?: string;
-      type?: string; assignee?: string; epic?: string; sprint?: string;
+      type?: string; assignee?: string; sprint?: string;
       search?: string; sort?: string;
     },
   ) {
@@ -56,7 +55,6 @@ export const TaskService = {
     if (query.priority) filter.priority = query.priority;
     if (query.type) filter.type = query.type;
     if (query.assignee) filter.assignee = query.assignee;
-    if (query.epic) filter.epic = query.epic;
     if (query.sprint) filter.sprint = query.sprint;
     if (query.search) {
       filter.title = { $regex: escapeRegExp(query.search), $options: 'i' };
@@ -70,7 +68,6 @@ export const TaskService = {
     const [tasks, total] = await Promise.all([
       Task.find(filter)
         .populate('assignee', 'name email avatar')
-        .populate('epic', 'title')
         .populate('sprint', 'name')
         .skip(skip)
         .limit(limit)
@@ -84,16 +81,14 @@ export const TaskService = {
   async getById(id: string) {
     const task = await Task.findById(id)
       .populate('assignee', 'name email avatar')
-      .populate('epic', 'title status')
       .populate('sprint', 'name status');
     if (!task) throw new NotFoundError('Task');
     return task;
   },
 
   async update(id: string, data: UpdateTaskInput) {
-    const { epicId, sprintId, assigneeId, ...rest } = data;
+    const { sprintId, assigneeId, ...rest } = data;
     const updateData: Record<string, unknown> = { ...rest };
-    if (epicId !== undefined) updateData.epic = epicId;
     if (sprintId !== undefined) updateData.sprint = sprintId;
     if (assigneeId !== undefined) updateData.assignee = assigneeId;
 
@@ -126,7 +121,6 @@ export const TaskService = {
     if (update.priority) updateData.priority = update.priority;
     if (update.assigneeId !== undefined) updateData.assignee = update.assigneeId;
     if (update.sprintId !== undefined) updateData.sprint = update.sprintId;
-    if (update.epicId !== undefined) updateData.epic = update.epicId;
 
     return Task.updateMany(
       { _id: { $in: taskIds } },
@@ -178,8 +172,7 @@ export const TaskService = {
         .sort(sortObj)
         .skip(skip)
         .limit(limit)
-        .populate('assignee', 'name email avatar')
-        .populate('epic', 'title'),
+        .populate('assignee', 'name email avatar'),
       Task.countDocuments(filter),
     ]);
 
@@ -216,8 +209,7 @@ export const TaskService = {
     return Task.find(filter)
       .sort({ priority: 1, createdAt: -1 })
       .populate('project', 'name slug')
-      .populate('sprint', 'name endDate')
-      .populate('epic', 'title');
+      .populate('sprint', 'name endDate');
   },
 
   async reorderTask(
@@ -229,8 +221,7 @@ export const TaskService = {
       { status: data.status, order: data.order },
       { returnDocument: 'after', runValidators: true },
     )
-      .populate('assignee', 'name email avatar')
-      .populate('epic', 'title');
+      .populate('assignee', 'name email avatar');
 
     if (!task) throw new NotFoundError('Task');
     return task;

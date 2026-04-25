@@ -107,13 +107,6 @@ export function TaskDetailPanel({ taskId, projectId, onClose }: TaskDetailPanelP
             </div>
           )}
 
-          {task.epic && typeof task.epic === 'object' && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Epic</span>
-              <span className="text-sm text-accent">{(task.epic as { title: string }).title}</span>
-            </div>
-          )}
-
           {task.sprint && typeof task.sprint === 'object' && (
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Sprint</span>

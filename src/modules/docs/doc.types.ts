@@ -1,4 +1,4 @@
-export type LinkedEntityType = 'epic' | 'task' | 'sprint';
+export type LinkedEntityType = 'task' | 'sprint';
 
 export interface LinkedEntity {
   type: LinkedEntityType;

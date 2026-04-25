@@ -164,7 +164,7 @@ export default function DashboardPage() {
             <>
               <h2 className="mt-4 text-base font-medium text-primary">No projects yet</h2>
               <p className="mt-1 max-w-sm text-sm text-secondary">
-                Create your first project to start tracking tasks, epics, and more.
+                Create your first project to start tracking tasks, sprints, and more.
               </p>
               <Button className="mt-4" onClick={() => setShowCreate(true)}>
                 <Plus size={16} data-icon="inline-start" />

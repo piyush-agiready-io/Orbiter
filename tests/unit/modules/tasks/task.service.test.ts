@@ -1,5 +1,5 @@
 import { setupTestDB, teardownTestDB, clearCollections } from '../../../helpers/db';
-import { createUser, createProject, createTask, createEpic } from '../../../helpers/factory';
+import { createUser, createProject, createTask } from '../../../helpers/factory';
 import { TaskService } from '@/modules/tasks/task.service';
 
 jest.mock('@/config/env', () => ({
@@ -34,14 +34,11 @@ describe('TaskService', () => {
       expect(task.project.toString()).toBe(projectId);
     });
 
-    it('creates a task with epic and assignee', async () => {
-      const epic = await createEpic(projectId, userId);
+    it('creates a task with sprint and assignee', async () => {
       const task = await TaskService.create(projectId, {
         title: 'Task with refs',
-        epicId: epic._id.toString(),
         assigneeId: userId,
       });
-      expect(task.epic!.toString()).toBe(epic._id.toString());
       expect(task.assignee!.toString()).toBe(userId);
     });
   });

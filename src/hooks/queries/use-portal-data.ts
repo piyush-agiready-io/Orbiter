@@ -29,15 +29,6 @@ export function usePortalTasks(projectId: string) {
   });
 }
 
-export function usePortalEpics(projectId: string) {
-  const isAuthenticated = useAuth((s) => s.isAuthenticated);
-  return useQuery({
-    queryKey: ['portal', 'epics', projectId],
-    queryFn: () => api.get(`/portal/projects/${projectId}/epics`),
-    enabled: isAuthenticated && !!projectId,
-  });
-}
-
 export function usePortalLinks(projectId: string) {
   const isAuthenticated = useAuth((s) => s.isAuthenticated);
   return useQuery({

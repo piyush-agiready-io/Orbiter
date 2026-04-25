@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useEpics } from '@/hooks/queries/use-epics';
 import { useSprints } from '@/hooks/queries/use-sprints';
 
 interface TaskFiltersProps {
@@ -19,7 +18,6 @@ interface TaskFiltersProps {
 }
 
 export function TaskFilters({ projectId, filters, onChange }: TaskFiltersProps) {
-  const { data: epicsData } = useEpics(projectId);
   const { data: sprintsData } = useSprints(projectId);
 
   const update = (key: string, value: string) => {
@@ -67,16 +65,6 @@ export function TaskFilters({ projectId, filters, onChange }: TaskFiltersProps) 
           <SelectItem value="feature">Feature</SelectItem>
           <SelectItem value="chore">Chore</SelectItem>
           <SelectItem value="improvement">Improvement</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select value={filters.epic ?? 'all'} onValueChange={(v) => update('epic', v ?? 'all')}>
-        <SelectTrigger size="sm"><SelectValue placeholder="Epic" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Epics</SelectItem>
-          {epicsData?.epics?.map((e) => (
-            <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
-          ))}
         </SelectContent>
       </Select>
 

@@ -9,7 +9,6 @@ export interface TaskDocument extends Document {
   prioritySource: PrioritySource;
   status: TaskStatus;
   project: Schema.Types.ObjectId;
-  epic?: Schema.Types.ObjectId;
   sprint?: Schema.Types.ObjectId;
   assignee?: Schema.Types.ObjectId;
   tags: string[];
@@ -45,7 +44,6 @@ const taskSchema = new Schema<TaskDocument>(
       default: 'backlog',
     },
     project: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
-    epic: { type: Schema.Types.ObjectId, ref: 'Epic' },
     sprint: { type: Schema.Types.ObjectId, ref: 'Sprint' },
     assignee: { type: Schema.Types.ObjectId, ref: 'User' },
     tags: { type: [String], default: [] },
@@ -68,7 +66,6 @@ const taskSchema = new Schema<TaskDocument>(
 
 taskSchema.index({ project: 1, status: 1 });
 taskSchema.index({ sprint: 1 });
-taskSchema.index({ epic: 1 });
 taskSchema.index({ assignee: 1 });
 taskSchema.index({ project: 1, status: 1, order: 1 });
 

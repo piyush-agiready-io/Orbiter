@@ -16,7 +16,7 @@ const linkedEntitySchema = new Schema(
   {
     type: {
       type: String,
-      enum: ['epic', 'task', 'sprint'],
+      enum: ['task', 'sprint'],
       required: true,
     },
     ref: {

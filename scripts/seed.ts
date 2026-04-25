@@ -81,20 +81,6 @@ const projectSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-const epicSchema = new mongoose.Schema(
-  {
-    title: { type: String, required: true, trim: true },
-    description: { type: String, trim: true },
-    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    status: { type: String, enum: ['planning', 'active', 'done'], default: 'planning' },
-    startDate: { type: Date },
-    endDate: { type: Date },
-    progress: { type: Number, default: 0, min: 0, max: 100 },
-  },
-  { timestamps: true },
-);
-
 const velocitySubSchema = new mongoose.Schema(
   { planned: { type: Number, default: 0 }, completed: { type: Number, default: 0 } },
   { _id: false },
@@ -123,7 +109,6 @@ const taskSchema = new mongoose.Schema(
     prioritySource: { type: String, enum: ['ai', 'manual', 'default'], default: 'default' },
     status: { type: String, enum: ['backlog', 'todo', 'in_progress', 'review', 'done'], default: 'backlog' },
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
-    epic: { type: mongoose.Schema.Types.ObjectId, ref: 'Epic' },
     sprint: { type: mongoose.Schema.Types.ObjectId, ref: 'Sprint' },
     assignee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     tags: { type: [String], default: [] },
@@ -170,7 +155,7 @@ const bugSchema = new mongoose.Schema(
 
 const linkedEntitySubSchema = new mongoose.Schema(
   {
-    type: { type: String, enum: ['epic', 'task', 'sprint'], required: true },
+    type: { type: String, enum: ['task', 'sprint'], required: true },
     ref: { type: mongoose.Schema.Types.ObjectId, required: true },
   },
   { _id: false },
@@ -241,7 +226,6 @@ const commentSchema = new mongoose.Schema(
 // ── Models ────────────────────────────────────────────────────────────────────
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Project = mongoose.models.Project || mongoose.model('Project', projectSchema);
-const Epic = mongoose.models.Epic || mongoose.model('Epic', epicSchema);
 const Sprint = mongoose.models.Sprint || mongoose.model('Sprint', sprintSchema);
 const Task = mongoose.models.Task || mongoose.model('Task', taskSchema);
 const Bug = mongoose.models.Bug || mongoose.model('Bug', bugSchema);
@@ -314,7 +298,6 @@ async function seed() {
   console.log('\nClearing existing data (projects, tasks, etc.)...');
   await Promise.all([
     Project.deleteMany({}),
-    Epic.deleteMany({}),
     Sprint.deleteMany({}),
     Task.deleteMany({}),
     Bug.deleteMany({}),
@@ -360,55 +343,7 @@ async function seed() {
 
   console.log('  Created: Orbiter Platform, Client Portal v2, API Redesign');
 
-  // ── 4. Epics ──────────────────────────────────────────────────────────────
-  console.log('\nSeeding epics...');
-  const authEpic = await Epic.create({
-    title: 'Authentication System',
-    description: 'Complete auth flow including JWT, refresh tokens, password reset, and invite system',
-    project: orbiterProject._id,
-    owner: aman._id,
-    status: 'active',
-    progress: 75,
-    startDate: new Date('2026-04-14'),
-    endDate: new Date('2026-05-02'),
-  });
-
-  const taskMgmtEpic = await Epic.create({
-    title: 'Task Management',
-    description: 'Kanban board, task CRUD, drag-and-drop reordering, and sprint integration',
-    project: orbiterProject._id,
-    owner: om._id,
-    status: 'active',
-    progress: 40,
-    startDate: new Date('2026-04-21'),
-    endDate: new Date('2026-05-16'),
-  });
-
-  const clientDashEpic = await Epic.create({
-    title: 'Client Dashboard',
-    description: 'Client-facing dashboard with project overview, task visibility, and status tracking',
-    project: clientPortal._id,
-    owner: om._id,
-    status: 'planning',
-    progress: 0,
-    startDate: new Date('2026-05-05'),
-    endDate: new Date('2026-05-30'),
-  });
-
-  const apiV2Epic = await Epic.create({
-    title: 'API v2 Migration',
-    description: 'Migrate all endpoints to v2 with proper versioning, pagination, and error handling',
-    project: apiRedesign._id,
-    owner: nitish._id,
-    status: 'active',
-    progress: 20,
-    startDate: new Date('2026-04-21'),
-    endDate: new Date('2026-05-23'),
-  });
-
-  console.log('  Created: Authentication System, Task Management, Client Dashboard, API v2 Migration');
-
-  // ── 5. Sprints ────────────────────────────────────────────────────────────
+  // ── 4. Sprints ────────────────────────────────────────────────────────────
   console.log('\nSeeding sprints...');
   const sprint1 = await Sprint.create({
     name: 'Sprint 1',
@@ -499,7 +434,6 @@ async function seed() {
       project: orbiterProject._id,
       sprint: sprint2._id,
       assignee: om._id,
-      epic: taskMgmtEpic._id,
       tags: ['sprint', 'automation'],
       clientVisible: false,
       order: 0,
@@ -544,7 +478,6 @@ async function seed() {
     project: orbiterProject._id,
     sprint: sprint2._id,
     assignee: aman._id,
-    epic: authEpic._id,
     tags: ['auth', 'security'],
     clientVisible: true,
     order: 0,
@@ -561,7 +494,6 @@ async function seed() {
       project: orbiterProject._id,
       sprint: sprint2._id,
       assignee: om._id,
-      epic: taskMgmtEpic._id,
       tags: ['kanban', 'dnd'],
       clientVisible: false,
       order: 1,
@@ -626,7 +558,6 @@ async function seed() {
       project: orbiterProject._id,
       sprint: sprint1._id,
       assignee: aman._id,
-      epic: authEpic._id,
       tags: ['auth'],
       clientVisible: true,
       order: 0,
@@ -798,7 +729,7 @@ async function seed() {
         'API Authentication\nOrbiter uses JWT-based authentication with access and refresh token pairs. Access tokens expire after 15 minutes, while refresh tokens last 7 days. Token rotation is enforced — each refresh invalidates the previous token.',
       project: orbiterProject._id,
       author: nitish._id,
-      linkedTo: [{ type: 'epic', ref: authEpic._id }],
+      linkedTo: [],
     },
   ]);
   console.log('  Created 2 docs');
@@ -917,7 +848,6 @@ async function seed() {
   console.log('────────────────────────────────────────');
   console.log(`  Users:          4 (1 admin + 3 seeded)`);
   console.log(`  Projects:       3`);
-  console.log(`  Epics:          4`);
   console.log(`  Sprints:        3`);
   console.log(`  Tasks:         15`);
   console.log(`  Bugs:           4`);

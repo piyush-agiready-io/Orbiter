@@ -6,14 +6,6 @@ import { TimelineHeader } from './timeline-header';
 import { TimelineRow } from './timeline-row';
 
 interface TimelineChartProps {
-  epics: {
-    _id: string;
-    title: string;
-    startDate?: string;
-    endDate?: string;
-    progress: number;
-    status: string;
-  }[];
   sprints: {
     _id: string;
     name: string;
@@ -23,15 +15,12 @@ interface TimelineChartProps {
   isLoading?: boolean;
 }
 
-export function TimelineChart({ epics, sprints, isLoading }: TimelineChartProps) {
+export function TimelineChart({ sprints, isLoading }: TimelineChartProps) {
   const { timelineStart, timelineEnd } = useMemo(() => {
-    const allDates = [
-      ...epics.flatMap((e) => [
-        e.startDate ? new Date(e.startDate) : null,
-        e.endDate ? new Date(e.endDate) : null,
-      ]),
-      ...sprints.flatMap((s) => [new Date(s.startDate), new Date(s.endDate)]),
-    ].filter(Boolean) as Date[];
+    const allDates = sprints.flatMap((s) => [
+      new Date(s.startDate),
+      new Date(s.endDate),
+    ]);
 
     if (allDates.length === 0) {
       const now = new Date();
@@ -42,17 +31,13 @@ export function TimelineChart({ epics, sprints, isLoading }: TimelineChartProps)
       timelineStart: subWeeks(min(allDates), 1),
       timelineEnd: addWeeks(max(allDates), 2),
     };
-  }, [epics, sprints]);
+  }, [sprints]);
 
   if (isLoading) {
     return (
       <div className="space-y-3 rounded-lg border border-border-subtle bg-surface p-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            data-testid="timeline-skeleton"
-            className="flex h-12 items-center gap-4"
-          >
+          <div key={i} className="flex h-12 items-center gap-4">
             <div className="h-4 w-32 animate-pulse rounded bg-subtle" />
             <div className="h-6 flex-1 animate-pulse rounded bg-subtle" />
           </div>
@@ -61,54 +46,47 @@ export function TimelineChart({ epics, sprints, isLoading }: TimelineChartProps)
     );
   }
 
-  const epicRows = epics.filter((e) => e.startDate && e.endDate);
-
   return (
     <div className="rounded-lg border border-border-subtle bg-surface">
       <div className="flex">
-        {/* Left column: epic titles (sticky) */}
         <div className="w-40 shrink-0 border-r border-border-subtle bg-surface">
           <div className="border-b border-border-default px-4 py-2">
             <span className="text-xs font-medium uppercase tracking-wide text-secondary">
-              Epic
+              Sprint
             </span>
           </div>
-          {/* Sprint label spacer — match header sprint row height */}
-          <div className="h-6 border-b border-border-default" />
-          {epicRows.map((epic) => (
+          {sprints.map((sprint) => (
             <div
-              key={epic._id}
+              key={sprint._id}
               className="flex items-center border-b border-border-subtle px-4 last:border-b-0"
               style={{ height: 48 }}
             >
               <span className="truncate text-sm font-medium text-primary">
-                {epic.title}
+                {sprint.name}
               </span>
             </div>
           ))}
         </div>
 
-        {/* Right area: timeline */}
         <div className="relative flex-1 min-w-0">
           <TimelineHeader
             startDate={timelineStart}
             endDate={timelineEnd}
             sprints={sprints}
           />
-          {epicRows.map((epic) => (
+          {sprints.map((sprint) => (
             <TimelineRow
-              key={epic._id}
-              title={epic.title}
-              startDate={new Date(epic.startDate!)}
-              endDate={new Date(epic.endDate!)}
-              progress={epic.progress}
+              key={sprint._id}
+              title={sprint.name}
+              startDate={new Date(sprint.startDate)}
+              endDate={new Date(sprint.endDate)}
+              progress={0}
               timelineStart={timelineStart}
               timelineEnd={timelineEnd}
-              status={epic.status}
+              status="active"
             />
           ))}
 
-          {/* Today marker spanning all rows */}
           {(() => {
             const today = new Date();
             const totalMs = timelineEnd.getTime() - timelineStart.getTime();
@@ -130,10 +108,9 @@ export function TimelineChart({ epics, sprints, isLoading }: TimelineChartProps)
         </div>
       </div>
 
-      {epicRows.length === 0 && (
+      {sprints.length === 0 && (
         <div className="px-4 py-12 text-center text-secondary">
-          No epics with date ranges. Add start/end dates to epics to see them on
-          the timeline.
+          No sprints found. Create sprints with start/end dates to see them on the timeline.
         </div>
       )}
     </div>
