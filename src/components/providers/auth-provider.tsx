@@ -7,12 +7,20 @@ import { useAuth } from '@/hooks/use-auth';
 const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isChecking, setIsChecking] = useState(true);
-  const { setAuth, clearAuth } = useAuth();
+  const { user, isAuthenticated, setAuth, clearAuth } = useAuth();
+  const [isChecking, setIsChecking] = useState(!isAuthenticated);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'client' && !pathname.startsWith('/portal')) {
+        router.replace('/portal');
+      }
+      setIsChecking(false);
+      return;
+    }
+
     async function checkAuth() {
       try {
         const res = await fetch('/api/v1/auth/refresh', {

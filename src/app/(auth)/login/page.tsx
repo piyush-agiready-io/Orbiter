@@ -42,9 +42,9 @@ export default function LoginPage() {
       setAuth(json.data.user, json.data.accessToken);
 
       if (json.data.user.role === 'client') {
-        router.push('/portal');
+        router.replace('/portal');
       } else {
-        router.push('/');
+        router.replace('/');
       }
     } catch {
       setServerError('Something went wrong. Please try again.');
