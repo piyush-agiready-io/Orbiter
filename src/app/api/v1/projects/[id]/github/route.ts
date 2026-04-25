@@ -3,6 +3,7 @@ import { requireRole } from '@/shared/middleware/role-guard';
 import { GitHubService } from '@/modules/github/github.service';
 import { GitHubSyncAgent } from '@/modules/ai/agents/github-sync.agent';
 import { Project } from '@/modules/projects/project.model';
+import '@/modules/users/user.model';
 import { decrypt } from '@/shared/lib/encryption';
 
 export const GET = apiHandler({

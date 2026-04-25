@@ -1,6 +1,7 @@
 import { apiHandler } from '@/shared/middleware/api-handler';
 import { GitHubService } from '@/modules/github/github.service';
 import { Project } from '@/modules/projects/project.model';
+import '@/modules/users/user.model';
 import { decrypt } from '@/shared/lib/encryption';
 import { z } from 'zod';
 

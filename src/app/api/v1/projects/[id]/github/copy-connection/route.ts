@@ -1,6 +1,7 @@
 import { apiHandler } from '@/shared/middleware/api-handler';
 import { requireRole } from '@/shared/middleware/role-guard';
 import { Project } from '@/modules/projects/project.model';
+import '@/modules/users/user.model';
 import { NotFoundError } from '@/shared/middleware/api-handler';
 import { z } from 'zod';
 

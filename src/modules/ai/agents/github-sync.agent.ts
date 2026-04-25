@@ -12,7 +12,15 @@ interface SyncResult {
   statusUpdates: number;
 }
 
-const SUMMARY_INSTRUCTIONS = `You are a development team digest writer for the Orbiter project management platform. Given a list of git commits and pull requests, write a clear 3-5 sentence summary of what was accomplished. Group related work together. Highlight: features shipped, bugs fixed, and improvements made. Mention notable PRs by title. Use plain language a project manager would understand. Do not list individual commits — synthesize the work.`;
+const SUMMARY_INSTRUCTIONS = `You are a development team digest writer for the Orbiter project management platform. You will receive:
+1. NEW commits and PRs from the latest sync
+2. PREVIOUS sync history for context
+
+Write a clear summary with two sections:
+- "Latest Activity" (2-3 sentences): What was just synced — features shipped, bugs fixed, PRs merged. Be specific about what changed.
+- "Recent History" (1-2 sentences): Brief context from previous syncs to show trajectory and momentum.
+
+Use plain language a project manager would understand. Group related work together. Mention merged PRs by title. Do not list individual commits — synthesize the work.`;
 
 export const GitHubSyncAgent = {
   async syncProject(
@@ -41,16 +49,28 @@ export const GitHubSyncAgent = {
         if (commits.length > 0) {
           const commitList = commits
             .slice(0, 30)
-            .map((c) => `- ${c.message} (${c.author})`)
+            .map((c) => `- ${c.message.split('\n')[0]} (${c.author})`)
             .join('\n');
-          parts.push(`Commits (${commits.length}):\n${commitList}`);
+          parts.push(`NEW COMMITS (${commits.length}):\n${commitList}`);
         }
 
         if (pullRequests.length > 0) {
           const prList = pullRequests
             .map((pr) => `- #${pr.number} ${pr.title} [${pr.state}] by ${pr.author} (+${pr.additions}/-${pr.deletions})`)
             .join('\n');
-          parts.push(`Pull Requests (${pullRequests.length}):\n${prList}`);
+          parts.push(`NEW PULL REQUESTS (${pullRequests.length}):\n${prList}`);
+        }
+
+        const previousSyncs = await GitHubService.getSyncHistory(projectId, 5);
+        if (previousSyncs.length > 0) {
+          const historyLines = previousSyncs
+            .filter((s) => s.summary)
+            .slice(0, 3)
+            .map((s) => `- ${s.summary}`)
+            .join('\n');
+          if (historyLines) {
+            parts.push(`PREVIOUS SYNC SUMMARIES (for context):\n${historyLines}`);
+          }
         }
 
         summary = await CodexClient.complete({
