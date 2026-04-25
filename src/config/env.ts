@@ -11,6 +11,8 @@ const envSchema = z.object({
   R2_BUCKET_NAME: z.string().optional().default('orbiter-uploads'),
   R2_PUBLIC_URL: z.string().optional().default(''),
   RESEND_API_KEY: z.string().optional().default(''),
+  SMTP_USER: z.string().optional().default(''),
+  SMTP_PASS: z.string().optional().default(''),
   DEEPGRAM_API_KEY: z.string().optional().default(''),
   CHROME_EXTENSION_ID: z.string().optional().default(''),
   OPENAI_CLIENT_ID: z.string().default('app_EMoamEEZ73f0CkXaXp7hrann'),

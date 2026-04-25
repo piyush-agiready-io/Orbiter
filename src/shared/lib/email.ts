@@ -1,17 +1,21 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { env } from '@/config/env';
 
-let resend: Resend | null = null;
+let transporter: nodemailer.Transporter | null = null;
 
-function getResend(): Resend | null {
-  if (!env.RESEND_API_KEY) return null;
-  if (!resend) {
-    resend = new Resend(env.RESEND_API_KEY);
+function getTransporter(): nodemailer.Transporter | null {
+  if (!env.SMTP_USER || !env.SMTP_PASS) return null;
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASS,
+      },
+    });
   }
-  return resend;
+  return transporter;
 }
-
-const FROM_EMAIL = 'Orbiter <onboarding@resend.dev>';
 
 interface SendEmailOptions {
   to: string;
@@ -20,29 +24,23 @@ interface SendEmailOptions {
 }
 
 async function sendEmail(options: SendEmailOptions): Promise<boolean> {
-  const client = getResend();
-  if (!client) {
-    console.warn('Email not configured — RESEND_API_KEY missing');
+  const transport = getTransporter();
+  if (!transport) {
+    console.warn('Email not configured — SMTP_USER/SMTP_PASS missing');
     return false;
   }
 
   try {
-    const { data: result, error } = await client.emails.send({
-      from: FROM_EMAIL,
+    const result = await transport.sendMail({
+      from: `Orbiter <${env.SMTP_USER}>`,
       to: options.to,
       subject: options.subject,
       html: options.html,
     });
-
-    if (error) {
-      console.error('Email send failed:', JSON.stringify(error));
-      return false;
-    }
-
-    console.log('Email sent:', result?.id, 'to:', options.to);
+    console.log('Email sent:', result.messageId, 'to:', options.to);
     return true;
   } catch (err) {
-    console.error('Email send exception:', err);
+    console.error('Email send failed:', err);
     return false;
   }
 }
