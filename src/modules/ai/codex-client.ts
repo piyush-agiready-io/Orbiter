@@ -55,7 +55,7 @@ export const CodexClient = {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        model: req.model ?? 'gpt-4o',
+        model: req.model ?? 'gpt-5.4',
         instructions: sanitizedInstructions,
         input: [{ role: 'user', content: sanitizedInput }],
         store: false,
