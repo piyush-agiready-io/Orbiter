@@ -12,6 +12,50 @@ function githubHeaders(token: string): Record<string, string> {
 }
 
 export const GitHubService = {
+  async fetchUserRepos(token: string): Promise<{ owner: string; repo: string; fullName: string; private: boolean; description: string | null }[]> {
+    const repos: { owner: string; repo: string; fullName: string; private: boolean; description: string | null }[] = [];
+    let page = 1;
+    while (page <= 3) {
+      const res = await fetch(
+        `${GITHUB_API}/user/repos?per_page=100&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member`,
+        { headers: githubHeaders(token) },
+      );
+      if (!res.ok) break;
+      const data = (await res.json()) as Array<{
+        full_name: string;
+        owner: { login: string };
+        name: string;
+        private: boolean;
+        description: string | null;
+      }>;
+      if (data.length === 0) break;
+      repos.push(
+        ...data.map((r) => ({
+          owner: r.owner.login,
+          repo: r.name,
+          fullName: r.full_name,
+          private: r.private,
+          description: r.description,
+        })),
+      );
+      page++;
+    }
+    return repos;
+  },
+
+  async fetchReadme(owner: string, repo: string, token: string): Promise<string | null> {
+    try {
+      const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/readme`, {
+        headers: { ...githubHeaders(token), Accept: 'application/vnd.github.v3.raw' },
+      });
+      if (!res.ok) return null;
+      const text = await res.text();
+      return text.slice(0, 3000);
+    } catch {
+      return null;
+    }
+  },
+
   async validateRepo(owner: string, repo: string, token: string): Promise<boolean> {
     const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}`, {
       headers: githubHeaders(token),

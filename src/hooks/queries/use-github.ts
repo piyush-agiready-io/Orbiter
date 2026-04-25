@@ -91,4 +91,32 @@ export function useCopyGitHubConnection(projectId: string) {
   });
 }
 
-export type { GitHubCommit, GitHubPR, SyncRecord, GitHubData };
+interface GitHubRepoOption {
+  owner: string;
+  repo: string;
+  fullName: string;
+  private: boolean;
+  description: string | null;
+  linked: boolean;
+}
+
+export function useGitHubRepos(projectId: string, enabled = true) {
+  const isAuthenticated = useAuth((s) => s.isAuthenticated);
+  return useQuery({
+    queryKey: ['github-repos', projectId],
+    queryFn: () => api.get<{ repos: GitHubRepoOption[] }>(`/projects/${projectId}/github/repos`),
+    enabled: isAuthenticated && !!projectId && enabled,
+  });
+}
+
+export function useGitHubReadme(projectId: string, owner: string, repo: string) {
+  const isAuthenticated = useAuth((s) => s.isAuthenticated);
+  return useQuery({
+    queryKey: ['github-readme', projectId, owner, repo],
+    queryFn: () =>
+      api.get<{ readme: string | null }>(`/projects/${projectId}/github/readme`, { owner, repo }),
+    enabled: isAuthenticated && !!projectId && !!owner && !!repo,
+  });
+}
+
+export type { GitHubCommit, GitHubPR, SyncRecord, GitHubData, GitHubRepoOption };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -14,23 +14,32 @@ import {
   Sparkle,
   CircleNotch,
   Trash,
-  LinkSimple,
   SignOut,
   GithubLogo,
+  Lock,
+  BookOpen,
 } from '@phosphor-icons/react';
 import {
   useGitHubData,
   useTriggerSync,
   useConnectGitHub,
   useDisconnectGitHub,
+  useGitHubRepos,
+  useGitHubReadme,
 } from '@/hooks/queries/use-github';
 import type { SyncRecord, GitHubCommit, GitHubPR } from '@/hooks/queries/use-github';
 import { useProject } from '@/hooks/queries/use-projects';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/lib/api-client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { InfoTip } from '@/components/shared/info-tip';
@@ -68,10 +77,28 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('overview');
-  const [repoInput, setRepoInput] = useState('');
+  const [selectedRepoToAdd, setSelectedRepoToAdd] = useState('');
+  const [readmeRepo, setReadmeRepo] = useState<{ owner: string; repo: string } | null>(null);
 
   const project = projectData as { githubRepos?: GitHubRepo[] } | undefined;
   const githubRepos = project?.githubRepos ?? [];
+
+  const { data: availableReposData } = useGitHubRepos(projectId, !!data?.githubConnected);
+  const availableRepos = (availableReposData as { repos?: Array<{ owner: string; repo: string; fullName: string; private: boolean; description: string | null; linked: boolean }> })?.repos ?? [];
+  const unlinkedRepos = availableRepos.filter((r) => !r.linked);
+
+  const { data: readmeData } = useGitHubReadme(
+    projectId,
+    readmeRepo?.owner ?? '',
+    readmeRepo?.repo ?? '',
+  );
+  const readme = (readmeData as { readme?: string | null })?.readme ?? null;
+
+  useEffect(() => {
+    if (githubRepos.length > 0 && !readmeRepo) {
+      setReadmeRepo({ owner: githubRepos[0].owner, repo: githubRepos[0].repo });
+    }
+  }, [githubRepos, readmeRepo]);
 
   const updateRepos = useMutation({
     mutationFn: (repos: GitHubRepo[]) =>
@@ -79,6 +106,7 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       queryClient.invalidateQueries({ queryKey: ['github', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['github-repos', projectId] });
     },
   });
 
@@ -108,25 +136,24 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
     });
   };
 
-  const handleAddRepo = (e: FormEvent) => {
-    e.preventDefault();
-    const trimmed = repoInput.trim();
-    if (!trimmed) return;
+  const handleAddRepo = () => {
+    if (!selectedRepoToAdd) return;
+    const [owner, repo] = selectedRepoToAdd.split('/');
+    if (githubRepos.some((r) => r.owner === owner && r.repo === repo)) return;
 
-    const parts = trimmed.replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').split('/');
-    if (parts.length !== 2 || !parts[0] || !parts[1]) {
-      toast.error('Enter a valid owner/repo (e.g. acme/my-app)');
-      return;
-    }
-
-    const [owner, repo] = parts;
-    if (githubRepos.some((r) => r.owner === owner && r.repo === repo)) {
-      toast.error('This repository is already added');
-      return;
-    }
-
+    const isFirstRepo = githubRepos.length === 0;
     updateRepos.mutate([...githubRepos, { owner, repo }], {
-      onSuccess: () => { setRepoInput(''); toast.success(`Added ${owner}/${repo}`); },
+      onSuccess: () => {
+        setSelectedRepoToAdd('');
+        toast.success(`Added ${owner}/${repo}`);
+        if (isFirstRepo) {
+          setTimeout(() => {
+            triggerSync.mutate(undefined, {
+              onSuccess: () => toast.success('Initial sync complete'),
+            });
+          }, 500);
+        }
+      },
     });
   };
 
@@ -148,7 +175,6 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
     );
   }
 
-  // State 1: Not connected
   if (!data?.githubConnected) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-6">
@@ -157,11 +183,7 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
         <p className="mt-1 text-sm text-secondary max-w-sm text-center">
           Connect a GitHub account to this project to sync commits, pull requests, and get AI-powered summaries.
         </p>
-        <Button
-          className="mt-4"
-          onClick={handleConnect}
-          disabled={connectGitHub.isPending}
-        >
+        <Button className="mt-4" onClick={handleConnect} disabled={connectGitHub.isPending}>
           <GithubLogo size={16} weight="bold" className="mr-1.5" />
           {connectGitHub.isPending ? 'Connecting...' : 'Connect GitHub'}
         </Button>
@@ -194,11 +216,7 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
           <Button size="sm" variant="outline" onClick={handleDisconnect}>
             <SignOut size={14} className="mr-1" /> Disconnect
           </Button>
-          <Button
-            size="sm"
-            onClick={handleSync}
-            disabled={triggerSync.isPending || data.repoCount === 0}
-          >
+          <Button size="sm" onClick={handleSync} disabled={triggerSync.isPending || data.repoCount === 0}>
             {triggerSync.isPending ? (
               <><CircleNotch size={14} className="mr-1.5 animate-spin" /> Syncing...</>
             ) : (
@@ -211,7 +229,7 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
       {justConnected && (
         <div className="mb-4 flex items-center gap-2 rounded-md bg-[var(--color-success-muted)] px-3 py-2">
           <CheckCircle size={16} weight="fill" className="text-[var(--color-success)]" />
-          <p className="text-sm text-[var(--color-success)]">GitHub connected successfully. Add repos below to start syncing.</p>
+          <p className="text-sm text-[var(--color-success)]">GitHub connected. Select a repository below to start syncing.</p>
         </div>
       )}
 
@@ -241,18 +259,79 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
             ))}
           </div>
         )}
-        <form onSubmit={handleAddRepo} className="flex items-center gap-2">
-          <Input
-            placeholder="owner/repo or GitHub URL"
-            value={repoInput}
-            onChange={(e) => setRepoInput(e.target.value)}
-            className="font-mono text-xs flex-1"
-          />
-          <Button type="submit" size="sm" variant="secondary" disabled={!repoInput.trim() || updateRepos.isPending}>
+        <div className="flex items-center gap-2">
+          <Select value={selectedRepoToAdd} onValueChange={(v) => setSelectedRepoToAdd(v ?? '')}>
+            <SelectTrigger className="flex-1 font-mono text-xs">
+              <SelectValue placeholder="Select a repository to add..." />
+            </SelectTrigger>
+            <SelectContent>
+              {unlinkedRepos.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
+                  {availableRepos.length === 0 ? 'Loading repositories...' : 'All repos are linked'}
+                </div>
+              ) : (
+                unlinkedRepos.map((r) => (
+                  <SelectItem key={r.fullName} value={r.fullName}>
+                    <div className="flex items-center gap-2">
+                      {r.private && <Lock size={12} className="text-[var(--color-text-muted)]" />}
+                      <span>{r.fullName}</span>
+                      {r.description && (
+                        <span className="text-[var(--color-text-muted)] truncate max-w-[200px]">
+                          — {r.description}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={handleAddRepo}
+            disabled={!selectedRepoToAdd || updateRepos.isPending}
+          >
             {updateRepos.isPending ? 'Adding...' : 'Add'}
           </Button>
-        </form>
+        </div>
       </div>
+
+      {/* README Overview */}
+      {readme && githubRepos.length > 0 && (
+        <div className="mb-6 rounded-lg border border-subtle bg-surface p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen size={16} className="text-secondary" />
+            <h3 className="text-sm font-semibold text-primary">Repository Overview</h3>
+            {githubRepos.length > 1 && (
+              <Select
+                value={`${readmeRepo?.owner}/${readmeRepo?.repo}`}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  const [o, r] = v.split('/');
+                  setReadmeRepo({ owner: o, repo: r });
+                }}
+              >
+                <SelectTrigger className="h-7 w-auto text-xs font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {githubRepos.map((r) => (
+                    <SelectItem key={`${r.owner}/${r.repo}`} value={`${r.owner}/${r.repo}`}>
+                      {r.owner}/{r.repo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <div className="prose prose-sm max-w-none text-secondary">
+            <pre className="whitespace-pre-wrap text-xs leading-relaxed text-secondary font-sans bg-transparent border-0 p-0">
+              {readme}
+            </pre>
+          </div>
+        </div>
+      )}
 
       {/* Data tabs */}
       {data.repoCount > 0 && (
