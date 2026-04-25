@@ -10,6 +10,7 @@ import {
   ClockCounterClockwise,
   Robot,
   UsersThree,
+  Plus,
 } from '@phosphor-icons/react';
 import { useProjects } from '@/hooks/queries/use-projects';
 import { useFavorites } from '@/hooks/use-favorites';
@@ -146,6 +147,15 @@ export function DashboardSidebar() {
         </h3>
       </div>
       <nav className="flex flex-col gap-0.5">
+        {projects.length === 0 && (
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 rounded-md border border-dashed border-[var(--color-border-default)] px-3 py-2 text-sm text-secondary transition-colors hover:border-accent hover:text-accent"
+          >
+            <Plus size={14} className="shrink-0" />
+            <span>Create your first project</span>
+          </Link>
+        )}
         {projects.map((project: { id: string; name: string }, index: number) => {
           const isActive = pathname.startsWith(`/projects/${project.id}`);
           const dotColor = PROJECT_DOT_COLORS[index % PROJECT_DOT_COLORS.length];
