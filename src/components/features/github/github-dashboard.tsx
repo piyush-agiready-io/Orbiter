@@ -18,6 +18,7 @@ import {
   GithubLogo,
   Lock,
   BookOpen,
+  MagnifyingGlass,
 } from '@phosphor-icons/react';
 import {
   useGitHubData,
@@ -79,6 +80,8 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedRepoToAdd, setSelectedRepoToAdd] = useState('');
+  const [repoSearch, setRepoSearch] = useState('');
+  const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
   const [readmeRepo, setReadmeRepo] = useState<{ owner: string; repo: string } | null>(null);
   const [syncRunning, setSyncRunning] = useState(false);
   const [syncComplete, setSyncComplete] = useState(false);
@@ -148,23 +151,6 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
       onError: () => {
         setSyncRunning(false);
         toast.error('Sync failed — check connection');
-      },
-    });
-  };
-
-  const handleAddRepo = () => {
-    if (!selectedRepoToAdd) return;
-    const [owner, repo] = selectedRepoToAdd.split('/');
-    if (githubRepos.some((r) => r.owner === owner && r.repo === repo)) return;
-
-    const isFirstRepo = githubRepos.length === 0;
-    updateRepos.mutate([...githubRepos, { owner, repo }], {
-      onSuccess: () => {
-        setSelectedRepoToAdd('');
-        toast.success(`Added ${owner}/${repo}`);
-        if (isFirstRepo) {
-          setTimeout(() => handleSync(), 500);
-        }
       },
     });
   };
@@ -278,41 +264,72 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
             ))}
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <Select value={selectedRepoToAdd} onValueChange={(v) => setSelectedRepoToAdd(v ?? '')}>
-            <SelectTrigger className="flex-1 font-mono text-xs">
-              <SelectValue placeholder="Select a repository to add..." />
-            </SelectTrigger>
-            <SelectContent>
-              {unlinkedRepos.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
-                  {availableRepos.length === 0 ? 'Loading repositories...' : 'All repos are linked'}
-                </div>
-              ) : (
-                unlinkedRepos.map((r) => (
-                  <SelectItem key={r.fullName} value={r.fullName}>
-                    <div className="flex items-center gap-2">
-                      {r.private && <Lock size={12} className="text-[var(--color-text-muted)]" />}
-                      <span>{r.fullName}</span>
-                      {r.description && (
-                        <span className="text-[var(--color-text-muted)] truncate max-w-[200px]">
-                          — {r.description}
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleAddRepo}
-            disabled={!selectedRepoToAdd || updateRepos.isPending}
-          >
-            {updateRepos.isPending ? 'Adding...' : 'Add'}
-          </Button>
+        <div className="relative">
+          <div className="relative">
+            <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+            <input
+              type="text"
+              placeholder="Search your repositories..."
+              value={repoSearch}
+              onChange={(e) => { setRepoSearch(e.target.value); setRepoDropdownOpen(true); }}
+              onFocus={() => setRepoDropdownOpen(true)}
+              className="h-8 w-full rounded-md border border-[var(--color-border-default)] bg-surface pl-8 pr-3 text-xs font-mono text-primary placeholder:text-[var(--color-text-muted)] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            />
+          </div>
+          {repoDropdownOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setRepoDropdownOpen(false)} />
+              <div className="absolute left-0 right-0 top-9 z-50 max-h-56 overflow-y-auto rounded-lg border border-subtle bg-surface shadow-md">
+                {unlinkedRepos.length === 0 ? (
+                  <div className="px-3 py-3 text-xs text-[var(--color-text-muted)] text-center">
+                    {availableRepos.length === 0 ? 'Loading repositories...' : 'All repos are linked'}
+                  </div>
+                ) : (
+                  unlinkedRepos
+                    .filter((r) => !repoSearch || r.fullName.toLowerCase().includes(repoSearch.toLowerCase()))
+                    .slice(0, 8)
+                    .map((r) => (
+                      <button
+                        key={r.fullName}
+                        type="button"
+                        onClick={() => {
+                          setSelectedRepoToAdd(r.fullName);
+                          setRepoSearch(r.fullName);
+                          setRepoDropdownOpen(false);
+                          const [owner, repo] = r.fullName.split('/');
+                          const isFirstRepo = githubRepos.length === 0;
+                          updateRepos.mutate([...githubRepos, { owner, repo }], {
+                            onSuccess: () => {
+                              setRepoSearch('');
+                              setSelectedRepoToAdd('');
+                              toast.success(`Added ${r.fullName}`);
+                              if (isFirstRepo) setTimeout(() => handleSync(), 500);
+                            },
+                          });
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-subtle"
+                      >
+                        <GitBranch size={14} className="shrink-0 text-secondary" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            {r.private && <Lock size={10} className="text-[var(--color-text-muted)]" />}
+                            <span className="font-mono text-xs text-primary">{r.fullName}</span>
+                          </div>
+                          {r.description && (
+                            <p className="text-xs text-[var(--color-text-muted)] truncate mt-0.5">{r.description}</p>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                )}
+                {unlinkedRepos.filter((r) => !repoSearch || r.fullName.toLowerCase().includes(repoSearch.toLowerCase())).length === 0 && unlinkedRepos.length > 0 && (
+                  <div className="px-3 py-3 text-xs text-[var(--color-text-muted)] text-center">
+                    No repos matching "{repoSearch}"
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

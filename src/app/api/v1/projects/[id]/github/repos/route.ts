@@ -19,7 +19,7 @@ export const GET = apiHandler({
     const repos = await GitHubService.fetchUserRepos(token);
 
     const linkedSet = new Set(
-      (project.githubRepos ?? []).map((r) => `${r.owner}/${r.repo}`),
+      (project.githubRepos ?? []).map((r: { owner: string; repo: string }) => `${r.owner}/${r.repo}`),
     );
 
     return {
