@@ -32,6 +32,7 @@ import {
   Warning,
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
+import { InfoTip } from '@/components/shared/info-tip';
 
 const ROLE_STYLES: Record<string, string> = {
   admin: 'bg-[var(--color-error-muted)] text-[var(--color-error)]',
@@ -128,7 +129,10 @@ export default function AdminPage() {
     <div className="mx-auto max-w-3xl p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-primary">Team Management</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight text-primary">Team Management</h1>
+            <InfoTip text="Invite users to the platform. Admins manage everything. Internal team members work on projects. Clients get read-only access to their assigned projects." />
+          </div>
           <p className="mt-1 text-sm text-secondary">
             {users.length} members — {activeUsers.length} active, {pendingUsers.length} pending
           </p>

@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { InfoTip } from '@/components/shared/info-tip';
 
 interface DocContent {
   type: 'file' | 'doc';
@@ -289,6 +290,10 @@ export function DocList() {
 
   return (
     <div>
+      <div className="mb-4 flex items-center gap-2">
+        <h2 className="text-h2 font-semibold text-primary">Docs</h2>
+        <InfoTip text="Write rich text documents or upload files (PDF, images, etc.). Docs are project-scoped and searchable." />
+      </div>
       <div className="mb-6 flex items-center justify-between">
         <div className="relative w-64">
           <MagnifyingGlass

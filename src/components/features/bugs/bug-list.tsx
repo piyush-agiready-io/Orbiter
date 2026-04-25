@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { InfoTip } from '@/components/shared/info-tip';
 import { CreateBugDialog } from './create-bug-dialog';
 
 const PRIORITY_STYLES: Record<string, string> = {
@@ -63,7 +64,10 @@ export function BugList({ projectId }: { projectId: string }) {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold tracking-tight text-primary">Bugs</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-semibold tracking-tight text-primary">Bugs</h2>
+          <InfoTip text="Track bugs reported manually or via the Chrome extension. Bugs are prioritized P0-P3 and can be linked to tasks. AI auto-classifies priority." />
+        </div>
         <Button size="sm" onClick={() => setShowCreate(true)}>
           <Plus size={14} data-icon="inline-start" />
           Report Bug

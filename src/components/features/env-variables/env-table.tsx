@@ -15,6 +15,7 @@ import {
   DownloadSimple,
   CircleNotch,
 } from '@phosphor-icons/react';
+import { InfoTip } from '@/components/shared/info-tip';
 import {
   useEnvVariables,
   useCreateEnvVariable,
@@ -224,7 +225,10 @@ export function EnvTable() {
       />
 
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-h2 font-semibold text-primary">Environment Variables</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-h2 font-semibold text-primary">Environment Variables</h2>
+          <InfoTip text="Store secrets like API keys and database URLs. Values are AES-256 encrypted. Use Dev for development and Prod for production." />
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"

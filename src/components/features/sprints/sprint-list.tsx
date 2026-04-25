@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSprints, useUpdateSprint } from '@/hooks/queries/use-sprints';
+import { InfoTip } from '@/components/shared/info-tip';
 import { format } from 'date-fns';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; style: string }> = {
@@ -59,7 +60,10 @@ export function SprintList({ projectId, onSelect, onClose, onCreate }: SprintLis
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-primary">Sprints</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-semibold text-primary">Sprints</h2>
+          <InfoTip text="Sprints are time-boxed iterations (1-2 weeks). Create a sprint, start it, add tasks, then close it when done to track velocity." />
+        </div>
         <Button size="sm" onClick={onCreate}>
           <Plus size={16} className="mr-1" /> New Sprint
         </Button>

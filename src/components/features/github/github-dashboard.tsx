@@ -33,6 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { InfoTip } from '@/components/shared/info-tip';
 
 interface GitHubDashboardProps {
   projectId: string;
@@ -177,7 +178,10 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-h2 font-semibold text-primary">GitHub</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-h2 font-semibold text-primary">GitHub</h2>
+            <InfoTip text="Connect GitHub to sync commits and PRs. AI generates summaries of synced activity. Commits with 'TASK-123' or 'fixes #123' auto-update task status." />
+          </div>
           <p className="mt-0.5 text-sm text-secondary">
             Connected as <strong>{data.githubUsername}</strong>
             {' — '}{data.repoCount} repo{data.repoCount !== 1 ? 's' : ''} linked

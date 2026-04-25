@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { useCreateTask } from '@/hooks/queries/use-tasks';
 import { useSprints } from '@/hooks/queries/use-sprints';
+import { InfoTip } from '@/components/shared/info-tip';
 
 const formSchema = z.object({
   title: z.string().min(2).max(300),
@@ -103,7 +104,10 @@ export function TaskForm({ projectId, open, onClose, defaultStatus = 'backlog' }
               </Select>
             </div>
             <div>
-              <Label className="text-sm font-medium text-primary">Priority</Label>
+              <div className="flex items-center gap-1.5">
+                <Label className="text-sm font-medium text-primary">Priority</Label>
+                <InfoTip text="P0: Critical (security, crashes). P1: High (broken features). P2: Medium (default). P3: Low (polish, nice-to-have). AI auto-classifies if ChatGPT is connected." />
+              </div>
               <Select value={form.watch('priority')} onValueChange={(v) => form.setValue('priority', v as FormValues['priority'])}>
                 <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>

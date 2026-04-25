@@ -14,6 +14,7 @@ import {
   Trash,
 } from '@phosphor-icons/react';
 import { useLinks, useCreateLink, useUpdateLink, useDeleteLink } from '@/hooks/queries/use-links';
+import { InfoTip } from '@/components/shared/info-tip';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -120,7 +121,10 @@ export function LinkGrid() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-h2 font-semibold text-primary">Links</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-h2 font-semibold text-primary">Links</h2>
+          <InfoTip text="Quick-access links for your project — production URLs, Figma designs, API docs, repositories, and more." />
+        </div>
         <Dialog
           open={dialogOpen}
           onOpenChange={(open) => {

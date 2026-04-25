@@ -30,6 +30,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Avatar from 'boring-avatars';
 import { toast } from 'sonner';
+import { InfoTip } from '@/components/shared/info-tip';
 
 const updateSchema = z.object({
   name: z.string().min(2).max(100),
@@ -186,7 +187,10 @@ export default function ProjectSettingsPage() {
       <div className="mt-6 rounded-lg border border-subtle bg-surface p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-primary">Team Members</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-primary">Team Members</h3>
+              <InfoTip text="Add platform users to this project. Their role (Member/Client) is auto-assigned based on their platform role. Clients get read-only portal access." />
+            </div>
             <p className="mt-1 text-sm text-secondary">
               {(allMembers.length + 1)} member{allMembers.length !== 0 ? 's' : ''} on this project
             </p>

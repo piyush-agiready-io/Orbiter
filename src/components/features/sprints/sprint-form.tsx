@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useCreateSprint } from '@/hooks/queries/use-sprints';
+import { InfoTip } from '@/components/shared/info-tip';
 
 const formSchema = z.object({
   name: z.string().min(2).max(200),
@@ -55,9 +56,12 @@ export function SprintForm({ projectId, open, onClose }: SprintFormProps) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="bg-surface border-[var(--color-border-subtle)] sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold text-primary">
-            New Sprint
-          </DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-base font-semibold text-primary">
+              New Sprint
+            </DialogTitle>
+            <InfoTip text="A sprint is a 1-2 week iteration. Set a goal, pick dates, then start the sprint and assign tasks to it." />
+          </div>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
