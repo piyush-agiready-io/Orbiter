@@ -13,6 +13,7 @@ import {
   ArrowSquareOut,
 } from '@phosphor-icons/react';
 import { useDoc, useUpdateDoc } from '@/hooks/queries/use-docs';
+import { useUsers } from '@/hooks/queries/use-users';
 import { DocEditor } from '@/components/features/docs/doc-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -126,6 +127,10 @@ export default function DocDetailPage() {
 
   const { data, isLoading } = useDoc(docId);
   const updateDoc = useUpdateDoc(projectId);
+  const { data: usersData } = useUsers();
+  const mentionUsers = ((usersData as { users?: { id: string; name: string; role: string }[] })?.users ?? [])
+    .filter((u) => u.role !== 'client')
+    .map((u) => ({ id: u.id, name: u.name }));
 
   const doc = data as DocData | undefined;
 
@@ -221,6 +226,7 @@ export default function DocDetailPage() {
         <DocEditor
           content={(doc.content as Record<string, unknown>) ?? {}}
           onChange={handleContentChange}
+          mentionUsers={mentionUsers}
         />
       )}
     </div>

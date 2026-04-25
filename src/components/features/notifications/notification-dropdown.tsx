@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Bug, UserCircle, ChatCircle, Flag } from '@phosphor-icons/react';
+import { Bug, UserCircle, Flag, GitBranch, At, Bell } from '@phosphor-icons/react';
 import { useNotifications, useMarkAsRead, useMarkAllRead } from '@/hooks/queries/use-notifications';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,15 +19,17 @@ interface NotificationItem {
 function getNotificationIcon(type: string) {
   switch (type) {
     case 'bug_created':
-      return <Bug size={16} className="shrink-0 text-[var(--color-error)]" />;
+      return <Bug size={16} weight="fill" className="shrink-0 text-[var(--color-error)]" />;
     case 'task_assigned':
-      return <UserCircle size={16} className="shrink-0 text-[var(--color-accent)]" />;
+      return <UserCircle size={16} weight="fill" className="shrink-0 text-[var(--color-accent)]" />;
     case 'comment_mention':
-      return <ChatCircle size={16} className="shrink-0 text-[var(--color-info)]" />;
+      return <At size={16} weight="bold" className="shrink-0 text-[var(--color-info)]" />;
     case 'priority_changed':
-      return <Flag size={16} className="shrink-0 text-[var(--color-warning)]" />;
+      return <Flag size={16} weight="fill" className="shrink-0 text-[var(--color-warning)]" />;
+    case 'github_digest':
+      return <GitBranch size={16} className="shrink-0 text-[var(--color-success)]" />;
     default:
-      return <Bug size={16} className="shrink-0 text-secondary" />;
+      return <Bell size={16} className="shrink-0 text-secondary" />;
   }
 }
 
@@ -55,6 +57,8 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
   const notifications: NotificationItem[] =
     (data as { notifications?: NotificationItem[] })?.notifications ?? [];
 
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
   function handleClick(notification: NotificationItem) {
     if (!notification.read) {
       markAsRead.mutate(notification.id);
@@ -65,32 +69,37 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
     onClose();
   }
 
-  function handleMarkAllRead() {
-    markAllRead.mutate();
-  }
-
   return (
-    <div className="absolute right-0 top-full mt-1 w-80 rounded-lg border border-default bg-surface shadow-lg">
-      <div className="flex items-center justify-between border-b border-subtle px-3 py-2">
-        <span className="text-sm font-medium text-primary">Notifications</span>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={handleMarkAllRead}
-          disabled={markAllRead.isPending}
-        >
-          Mark all read
-        </Button>
+    <div className="absolute right-0 top-full z-50 mt-2 w-96 rounded-xl border border-subtle bg-surface shadow-xl">
+      <div className="flex items-center justify-between border-b border-subtle px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-primary">Notifications</span>
+          {unreadCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-white">
+              {unreadCount}
+            </span>
+          )}
+        </div>
+        {unreadCount > 0 && (
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => markAllRead.mutate()}
+            disabled={markAllRead.isPending}
+          >
+            Mark all read
+          </Button>
+        )}
       </div>
 
-      <div className="max-h-80 overflow-y-auto">
+      <div className="max-h-96 overflow-y-auto">
         {isLoading && (
-          <div className="space-y-2 p-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex gap-2">
-                <Skeleton className="h-4 w-4 rounded-full" />
-                <div className="flex-1 space-y-1">
-                  <Skeleton className="h-3 w-3/4" />
+          <div className="space-y-1 p-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex gap-3 rounded-lg p-2.5">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
                 </div>
               </div>
@@ -99,37 +108,40 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
         )}
 
         {!isLoading && notifications.length === 0 && (
-          <div className="px-3 py-6 text-center text-sm text-muted">
-            No notifications
+          <div className="flex flex-col items-center justify-center px-4 py-10">
+            <Bell size={28} className="mb-2 text-[var(--color-text-muted)]" />
+            <p className="text-sm text-[var(--color-text-muted)]">No notifications yet</p>
           </div>
         )}
 
-        {notifications.map((notification) => (
-          <button
-            key={notification.id}
-            type="button"
-            onClick={() => handleClick(notification)}
-            className={`flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors duration-[120ms] ease-[ease] hover:bg-subtle ${
-              !notification.read ? 'bg-[var(--color-accent-muted)]/30' : ''
-            }`}
-          >
-            <div className="mt-0.5">{getNotificationIcon(notification.type)}</div>
-            <div className="min-w-0 flex-1">
-              <p
-                className={`truncate text-sm ${
-                  !notification.read ? 'font-medium text-primary' : 'text-secondary'
-                }`}
-              >
-                {notification.title}
-              </p>
-              <p className="truncate text-xs text-muted">{notification.message}</p>
-              <p className="mt-0.5 text-xs text-muted">{timeAgo(notification.createdAt)}</p>
-            </div>
-            {!notification.read && (
-              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--color-accent)]" />
-            )}
-          </button>
-        ))}
+        <div className="p-1.5">
+          {notifications.map((notification) => (
+            <button
+              key={notification.id}
+              type="button"
+              onClick={() => handleClick(notification)}
+              className={`flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-100 ${
+                !notification.read
+                  ? 'bg-[var(--color-accent-muted)]/40 hover:bg-[var(--color-accent-muted)]/60'
+                  : 'hover:bg-subtle'
+              }`}
+            >
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-subtle">
+                {getNotificationIcon(notification.type)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm leading-snug ${!notification.read ? 'font-semibold text-primary' : 'text-secondary'}`}>
+                  {notification.title}
+                </p>
+                <p className="mt-0.5 text-xs text-[var(--color-text-muted)] line-clamp-2">{notification.message}</p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">{timeAgo(notification.createdAt)}</p>
+              </div>
+              {!notification.read && (
+                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-accent" />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
 import { Comment } from '@/modules/comments/comment.model';
+import { User } from '@/modules/users/user.model';
 import { NotFoundError } from '@/shared/middleware/api-handler';
 import { ForbiddenError } from '@/shared/middleware/role-guard';
+import { sendMentionEmail } from '@/shared/lib/email';
+import { env } from '@/config/env';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import type { Role } from '@/shared/utils/constants';
 import type { CreateCommentInput, QueryCommentsInput } from './comment.validator';
@@ -22,24 +25,40 @@ export const CommentService = {
     });
 
     if (data.mentions.length > 0) {
+      const author = await User.findById(userId).select('name').lean();
+      const authorName = author?.name ?? 'Someone';
+      const contextLabel = parentType === 'bug' ? 'a bug report' : 'a task';
+      const link = parentType === 'bug'
+        ? `/bugs/${parentId}`
+        : `/tasks/${parentId}`;
+
       const { NotificationService } = await import(
         '@/modules/notifications/notification.service'
       );
-      const link =
-        parentType === 'bug'
-          ? `/bugs/${parentId}`
-          : `/tasks/${parentId}`;
+
+      const mentionedUsers = await User.find({ _id: { $in: data.mentions } })
+        .select('name email')
+        .lean();
 
       await Promise.all(
-        data.mentions.map((mentionedUserId) =>
-          NotificationService.notify(
-            mentionedUserId,
+        mentionedUsers.map(async (mentionedUser) => {
+          await NotificationService.notify(
+            mentionedUser._id.toString(),
             'comment_mention',
-            'You were mentioned in a comment',
+            `${authorName} mentioned you`,
             data.content.slice(0, 100),
             link,
-          ),
-        ),
+          );
+
+          const viewUrl = `${env.NEXT_PUBLIC_APP_URL}${link}`;
+          await sendMentionEmail(
+            mentionedUser.email,
+            authorName,
+            data.content,
+            contextLabel,
+            viewUrl,
+          ).catch(() => {});
+        }),
       ).catch(() => {});
     }
 

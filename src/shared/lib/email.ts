@@ -145,3 +145,24 @@ export async function sendBugAlertEmail(
 
   return sendEmail({ to, subject: `[P0] ${bugTitle} — ${projectName}`, html });
 }
+
+export async function sendMentionEmail(
+  to: string,
+  mentionedBy: string,
+  commentText: string,
+  contextLabel: string,
+  viewUrl: string,
+): Promise<boolean> {
+  const html = baseTemplate(`
+    <h2 style="margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a2e;">You were mentioned</h2>
+    <p style="margin:0 0 16px;font-size:14px;color:#4a4a68;line-height:1.6;">
+      <strong>${mentionedBy}</strong> mentioned you in <strong>${contextLabel}</strong>:
+    </p>
+    <div style="padding:12px 16px;background:#f4f4f7;border-left:3px solid #5B5FC7;border-radius:4px;margin:0 0 24px;">
+      <p style="margin:0;font-size:14px;color:#1a1a2e;">${commentText.slice(0, 300)}</p>
+    </div>
+    ${buttonHtml('View', viewUrl)}
+  `);
+
+  return sendEmail({ to, subject: `${mentionedBy} mentioned you in Orbiter`, html });
+}
