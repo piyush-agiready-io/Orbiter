@@ -7,76 +7,83 @@ import type { GitHubRepo } from '@/modules/github/github.types';
 interface SyncResult {
   projectId: string;
   commitCount: number;
+  prCount: number;
   summary?: string;
   statusUpdates: number;
 }
 
-const SUMMARY_INSTRUCTIONS = `You are a development team digest writer. Given a list of git commits, write a concise 2-3 sentence summary of what was accomplished. Focus on features added, bugs fixed, and improvements made. Use plain language a project manager would understand. Do not list individual commits.`;
+const SUMMARY_INSTRUCTIONS = `You are a development team digest writer for the Orbiter project management platform. Given a list of git commits and pull requests, write a clear 3-5 sentence summary of what was accomplished. Group related work together. Highlight: features shipped, bugs fixed, and improvements made. Mention notable PRs by title. Use plain language a project manager would understand. Do not list individual commits — synthesize the work.`;
 
 export const GitHubSyncAgent = {
-  /**
-   * Sync commits for a single project from its connected GitHub repos.
-   * Called by the Vercel Cron route for each project with GitHub repos.
-   */
   async syncProject(
     projectId: string,
     repos: GitHubRepo[],
     githubToken: string,
     userId: string,
   ): Promise<SyncResult> {
-    // Get last sync time to only fetch new commits
     const lastSync = await GitHubService.getLastSyncTime(projectId);
 
-    // Fetch new commits from all repos
-    const commits = await GitHubService.fetchCommitsForProject(
-      repos,
-      githubToken,
-      lastSync ?? undefined,
-    );
+    const [commits, pullRequests] = await Promise.all([
+      GitHubService.fetchCommitsForProject(repos, githubToken, lastSync ?? undefined),
+      GitHubService.fetchPRsForProject(repos, githubToken, lastSync ?? undefined),
+    ]);
 
-    if (commits.length === 0) {
-      return { projectId, commitCount: 0, statusUpdates: 0 };
+    if (commits.length === 0 && pullRequests.length === 0) {
+      return { projectId, commitCount: 0, prCount: 0, statusUpdates: 0 };
     }
 
-    // Generate AI summary if ChatGPT is available
     let summary: string | undefined;
     const key = await resolveApiKey(userId);
     if (key) {
       try {
-        const commitList = commits
-          .map((c) => `- ${c.message} (${c.author})`)
-          .join('\n');
+        const parts: string[] = [];
+
+        if (commits.length > 0) {
+          const commitList = commits
+            .slice(0, 30)
+            .map((c) => `- ${c.message} (${c.author})`)
+            .join('\n');
+          parts.push(`Commits (${commits.length}):\n${commitList}`);
+        }
+
+        if (pullRequests.length > 0) {
+          const prList = pullRequests
+            .map((pr) => `- #${pr.number} ${pr.title} [${pr.state}] by ${pr.author} (+${pr.additions}/-${pr.deletions})`)
+            .join('\n');
+          parts.push(`Pull Requests (${pullRequests.length}):\n${prList}`);
+        }
 
         summary = await CodexClient.complete({
           accessToken: key.token,
           accountId: key.accountId,
           instructions: SUMMARY_INSTRUCTIONS,
-          input: `Commits since last sync:\n${commitList}`,
+          input: parts.join('\n\n'),
         });
       } catch (error) {
-        console.error('Failed to generate commit summary:', error);
+        console.error('Failed to generate sync summary:', error);
       }
     }
 
-    // Store the sync record
-    await GitHubService.storeSync(projectId, commits, summary);
+    await GitHubService.storeSync(projectId, commits, pullRequests, summary);
 
-    // Run status update agent on the commits
     const statusResults = await StatusUpdateAgent.processBatch(projectId, commits);
     const statusUpdates = statusResults.filter((r) => r.updated).length;
 
-    // Create notification for the team
     try {
       const { NotificationService } = await import(
         '@/modules/notifications/notification.service'
       );
+
+      const message = summary ??
+        `${commits.length} commit(s) and ${pullRequests.length} PR(s) synced.`;
+
       await NotificationService.notifyProjectMembers(
         projectId,
-        '', // no user to exclude — cron job triggered
+        '',
         'github_digest',
         'GitHub Sync Complete',
-        summary ?? `${commits.length} new commit(s) synced.`,
-        `/projects/${projectId}`,
+        message,
+        `/projects/${projectId}/github`,
       );
     } catch (error) {
       console.error('Failed to create sync notification:', error);
@@ -85,6 +92,7 @@ export const GitHubSyncAgent = {
     return {
       projectId,
       commitCount: commits.length,
+      prCount: pullRequests.length,
       summary,
       statusUpdates,
     };

@@ -7,10 +7,24 @@ export interface IGitHubCommit {
   date: Date;
 }
 
+export interface IGitHubPR {
+  number: number;
+  title: string;
+  state: 'open' | 'closed' | 'merged';
+  author: string;
+  repo: string;
+  url: string;
+  createdAt: Date;
+  mergedAt?: Date;
+  additions: number;
+  deletions: number;
+}
+
 export interface IGitHubSync {
   _id: string;
   project: string;
   commits: IGitHubCommit[];
+  pullRequests: IGitHubPR[];
   summary?: string;
   lastSyncAt: Date;
   createdAt: Date;
