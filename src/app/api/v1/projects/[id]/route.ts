@@ -1,6 +1,7 @@
 import { apiHandler } from '@/shared/middleware/api-handler';
 import { requireRole } from '@/shared/middleware/role-guard';
 import { ProjectService } from '@/modules/projects/project.service';
+import '@/modules/users/user.model';
 import { checkProjectAccess } from '@/shared/middleware/project-access';
 import { updateProjectSchema } from '@/modules/projects/project.validator';
 import type { UpdateProjectInput } from '@/modules/projects/project.validator';

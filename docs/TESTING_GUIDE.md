@@ -1,362 +1,321 @@
-# Orbiter — Full E2E Testing Walkthrough (Fresh Install)
+# Orbiter — Testing Guide
 
-**URL:** `http://localhost:3000`
-**Admin:** `aman@agiready.io` / `OrbiterAdmin1!`
+This guide covers manual testing of all core features. Use it to verify the platform works end-to-end before any release.
 
----
-
-## Phase 1: Authentication
-
-### Test 1.1 — Login
-1. Open `http://localhost:3000` → should redirect to `/login`
-2. Try wrong password → should show "Invalid email or password"
-3. Try empty fields → should show validation errors
-4. Login with `aman@agiready.io` / `OrbiterAdmin1!` → should redirect to dashboard
-5. You see: empty dashboard with "No projects yet. Create your first project."
-
-### Test 1.2 — Session Persistence
-6. Close the tab, reopen `http://localhost:3000` → should auto-login (refresh token in cookie)
-
-### Test 1.3 — Theme Toggle
-7. Click the sun/moon icon in the topbar → dark mode activates with circular animation
-8. Refresh page → dark mode persists
-9. Toggle back to light mode
+**Platform URL:** https://orbiteragiready.vercel.app
+**Test Account:** `piyush@agiready.io` / `A1234567` (Admin)
 
 ---
 
-## Phase 2: Project Setup
+## 1. Authentication
 
-### Test 2.1 — Create First Project
-10. Click "+ Create Project" on the dashboard
-11. Name: `Orbiter Platform`, Description: `Internal project management tool`
-12. Project appears in dashboard grid AND sidebar
+### Login
+1. Go to https://orbiteragiready.vercel.app/login
+2. Enter email and password
+3. Click "Sign in"
+4. **Expected:** Redirects to dashboard with project list. No empty state flash.
 
-### Test 2.2 — Create Second Project
-13. Click "+ Create Project" again
-14. Name: `Client Website`, Description: `E-commerce redesign`
+### Show/Hide Password
+1. On login page, click the eye icon next to password field
+2. **Expected:** Password text toggles between visible and hidden
 
-### Test 2.3 — Navigate Projects
-15. Click `Orbiter Platform` in sidebar → redirects to board view
-16. Click the **Orbiter** logo in sidebar → goes back to project list
-17. Click **"All Projects"** breadcrumb above project tabs → goes back
+### Forgot Password
+1. On login page, click "Forgot password?"
+2. Enter your email, click "Send reset link"
+3. **Expected:** Shows "Check your email" message. Email arrives with reset link.
+4. Click the link in email, enter new password
+5. **Expected:** Password reset succeeds, can login with new password
 
----
-
-## Phase 3: Task Management (Kanban)
-
-### Test 3.1 — Create Tasks
-18. Inside Orbiter Platform → Board tab → click "+ New Task"
-19. Create these tasks (one at a time):
-
-| Title | Type | Priority |
-|-------|------|----------|
-| Set up JWT authentication | feature | (leave default — AI should classify) |
-| Design dashboard layout | feature | (leave default) |
-| Write API documentation | chore | (leave default) |
-| Fix login page styling | improvement | (leave default) |
-| Payment integration | feature | (leave default) |
-| Update README | chore | (leave default) |
-
-20. All tasks appear in **Backlog** column
-21. **AI Priority Detection test:** After a few seconds, check each task's priority:
-    - "Set up JWT authentication" → should be P0 (auth keyword)
-    - "Payment integration" → should be P0/P1 (payment keyword)
-    - "Update README" → should be P3 (docs keyword)
-    - Check if tasks show **"AI classified"** or **"Keyword fallback"** indicator
-
-### Test 3.2 — Drag and Drop
-22. Drag "Set up JWT authentication" from Backlog → In Progress
-23. Original card should DISAPPEAR during drag (no ghost duplicate)
-24. Card appears in In Progress column after drop
-25. Drag "Design dashboard layout" → Todo
-26. Drag "Fix login page styling" → In Progress
-
-### Test 3.3 — Kanban Filters
-27. Filter by Priority = P0 → only P0 tasks show
-28. Clear filter → all tasks show
-29. Search "JWT" → only matching task shows
-
-### Test 3.4 — Table View
-30. Click **Table** tab
-31. All tasks in a sortable table
-32. Click "Priority" column header → sorts by priority
-33. Check the **Priority Source** column — shows "ai" or "keyword" or "default"
-
-### Test 3.5 — Task Detail
-34. Click any task in the table → detail panel opens
-35. Edit the task title, change priority manually
-36. Priority source should change to "manual" after manual override
-37. Close the panel
+### Logout
+1. Click avatar (top-right) → "Sign out"
+2. **Expected:** Redirects to login page. Back button doesn't return to dashboard.
 
 ---
 
-## Phase 4: Sprints
+## 2. Team Management (Admin Only)
 
-### Test 4.1 — Create Sprint
-37. Click **Sprints** tab → "+ New Sprint"
-38. Name: `Sprint 1`, Goal: `Core authentication and setup`
-39. Start: next Monday, End: that Friday
-40. Sprint appears with "planning" status
+### Invite User
+1. Go to sidebar → "Team"
+2. Click "Invite User"
+3. Enter email, select role (Admin/Internal/Client)
+4. Click "Send Invite"
+5. **Expected:** Shows "Invitation email sent" + copyable registration link. User appears under "Pending Invites".
 
-### Test 4.2 — Activate Sprint
-41. If there's an activate button, activate it → status changes to "active"
+### Invite Status Tracking
+1. On Team page, verify users are grouped: Active Members / Pending Invites / Expired Invites
+2. Click resend button on pending/expired invite
+3. **Expected:** New invite email sent, status refreshes
 
-### Test 4.3 — Create Another Sprint
-42. Create `Sprint 2` for the following week, status: planning
-
----
-
-## Phase 5: Epics
-
-### Test 5.1 — Create Epic
-43. Click **Epics** tab → create epic
-44. Title: `Authentication System`, Status: active
-45. Start date: this week, End date: 2 weeks from now
-
-### Test 5.2 — Timeline View
-46. Click **Timeline** tab
-47. Should see the epic as a horizontal bar
-48. Sprint boundaries as dashed lines (if sprints have dates)
+### Remove User
+1. Hover over a user row → trash icon appears
+2. Click trash → confirmation dialog appears
+3. Click "Remove"
+4. **Expected:** User removed from list (no browser alert — styled dialog)
 
 ---
 
-## Phase 6: Bugs
+## 3. Projects
 
-### Test 6.1 — Create Bug Manually
-49. Click **Bugs** tab → "+ Report Bug"
-50. Title: `Login button misaligned on mobile`
-51. Priority: P1, Status: open, Source: manual
-52. Bug appears in the list
+### Create Project
+1. On dashboard, click "New Project"
+2. Enter name and description
+3. **Expected:** Project appears in sidebar and project grid
 
-### Test 6.2 — Bug Detail
-53. Click the bug → detail view
-54. Change status from "open" to "investigating"
-55. Change priority
-56. If the bug was from the extension: check Screenshot preview, Console Logs, Capture Details (URL, browser, OS, viewport)
+### Project Navigation
+1. Click a project → redirects to Board view
+2. Click through tabs: Board, Table, Timeline, Backlog, Sprints, Bugs, Docs, Links, Env, GitHub, Settings
+3. **Expected:** All tabs load without errors
 
----
+### Project Settings
+1. Go to project → Settings tab
+2. Edit project name/description → click "Save Changes"
+3. **Expected:** Changes saved, sidebar updates
 
-## Phase 7: Docs
+### Add Members to Project
+1. In Settings → "Add Member"
+2. Select a user from dropdown (only active, non-client users shown as Members; clients auto-assigned as Client)
+3. **Expected:** Member added. Info text shows their auto-assigned role.
 
-### Test 7.1 — Create Document
-57. Click **Docs** tab → create new doc
-58. Title: `Getting Started Guide`
-59. Type some content in the rich editor: heading, paragraph, list
-60. Content should save
-
----
-
-## Phase 8: Links
-
-### Test 8.1 — Add Links
-61. Click **Links** tab → "+ Add Link"
-62. Add: `Production` / `https://orbiter.io` / type: production
-63. Add: `Figma` / `https://figma.com/file/xyz` / type: figma
-64. Cards appear in the grid with type badges
+### Remove Member from Project
+1. Hover over member → trash icon
+2. Click → confirmation dialog → "Remove"
+3. **Expected:** Member removed from project
 
 ---
 
-## Phase 9: Environment Variables
+## 4. Kanban Board
 
-### Test 9.1 — Create Env Var
-65. Click **Env** tab
-66. Add variable: Key: `DATABASE_URL`, Value: `mongodb://localhost/test`, Environment: dev
-67. Value should appear masked (dots)
+### Create Task
+1. On Board tab, click "+" on any column or "New Task" button
+2. Fill in: Title, Description, Type, Priority, Sprint, Assignees (multi-select)
+3. **Expected:** Task appears in the correct column
 
-### Test 9.2 — Reveal
-68. Click reveal → actual value shows
+### Drag and Drop
+1. Drag a task card from one column to another
+2. **Expected:** Card moves, status updates. No duplicate cards.
 
-### Test 9.3 — Copy as .env
-69. Click export → copies as `DATABASE_URL=mongodb://localhost/test`
+### Task Card Menu
+1. Hover over a task card → three-dot menu appears (top-right)
+2. Click → "Edit task" or "Delete task"
+3. Delete shows confirmation dialog
+4. **Expected:** Edit opens detail panel, Delete removes task after confirmation
+
+### Task Detail Panel
+1. Click a task card → side panel opens
+2. Verify: status dropdown, priority dropdown, assignees list, sprint info
+3. Change status or priority from the panel
+4. **Expected:** Changes reflect on the board immediately
 
 ---
 
-## Phase 10: Team Management
+## 5. Sprints
 
-### Test 10.1 — Invite Internal User
-70. Via API (no invite UI yet):
+### Create Sprint
+1. Go to Sprints tab → "New Sprint"
+2. Enter name, goal, start date, end date
+3. **Expected:** Sprint appears in list with "planning" status
+
+### Start Sprint
+1. Click "Start Sprint" on a planning sprint
+2. **Expected:** Status changes to "active". Only one sprint can be active at a time.
+
+### View Sprint Board
+1. Click on an active sprint
+2. **Expected:** Shows Kanban board filtered to tasks assigned to this sprint
+
+### Close Sprint
+1. Click "Close Sprint" on active sprint
+2. Optionally add retro notes and rollover incomplete tasks
+3. **Expected:** Sprint status becomes "closed", velocity tracked
+
+---
+
+## 6. Bugs
+
+### Report Bug
+1. Go to Bugs tab → "Report Bug"
+2. Enter title, description, priority
+3. **Expected:** Bug appears in list
+
+### Bug Detail + Comments
+1. Click a bug → detail page
+2. Add a comment with @mention (type @ to see team members)
+3. **Expected:** Comment posted, mentioned user receives notification + email
+
+---
+
+## 7. Documents
+
+### Create Document (Rich Text)
+1. Go to Docs tab → "Write" button
+2. Enter title, write content in TipTap editor
+3. Use toolbar for formatting (bold, headers, lists, code)
+4. Type @ to mention team members
+5. **Expected:** Document auto-saves, mentions render as blue chips
+
+### Upload File
+1. Go to Docs tab → "Upload" button
+2. Select a file (PDF, image, etc.)
+3. **Expected:** File uploaded and viewable from docs list
+
+---
+
+## 8. GitHub Integration
+
+### Connect GitHub
+1. Go to project → GitHub tab
+2. Click "Connect GitHub" → redirects to GitHub OAuth
+3. Authorize the app
+4. **Expected:** Redirects back to GitHub tab showing "Connected as [username]"
+
+### Add Repository
+1. After connecting, search for a repo in the search input
+2. Click to add
+3. **Expected:** Repo appears in connected list. First sync auto-triggers.
+
+### Sync Now
+1. Click "Sync Now" button
+2. **Expected:** Animated progress loader (4 steps). After completion, commits and PRs appear.
+
+### AI Summaries
+1. After sync, check the "Latest AI Summary" section
+2. **Expected:** AI-generated summary of commits and PRs (requires ChatGPT connection by admin)
+
+### Disconnect
+1. Click "Disconnect" → confirmation dialog
+2. **Expected:** GitHub disconnected, repos cleared
+
+---
+
+## 9. Environment Variables
+
+### Add Variable
+1. Go to Env tab → "Add Variable"
+2. Enter key (auto-uppercased), value, environment (Dev/Prod)
+3. **Expected:** Variable added, value hidden as dots
+
+### Reveal/Hide Value
+1. Click eye icon on a variable
+2. **Expected:** Value revealed, click again to hide
+
+### Upload .env File
+1. Click "Upload .env" → select a .env file
+2. **Expected:** Variables imported with progress indicator
+
+### Download .env
+1. Click "Download .env"
+2. **Expected:** Downloads .env.{environment} file
+
+---
+
+## 10. Notifications
+
+### Notification Bell
+1. Click bell icon (top-right)
+2. **Expected:** Dropdown shows notifications with solid background, proper styling
+
+### Unread Indicator
+1. When there are unread notifications, red dot appears on bell
+2. Dropdown shows unread count badge
+3. **Expected:** Unread notifications highlighted, blue dot visible
+
+### Mark All Read
+1. Click "Mark all read" in dropdown
+2. **Expected:** All notifications marked as read
+
+---
+
+## 11. My Work
+
+### View Assigned Tasks
+1. Go to sidebar → "My Work"
+2. **Expected:** Shows tasks assigned to you, grouped by: Overdue / This Sprint / Upcoming
+
+### Change Task Status
+1. Click the status dropdown on any task row
+2. Select a new status (e.g., "In Progress")
+3. **Expected:** Status updates. Change reflects on the project's Kanban board.
+
+---
+
+## 12. Client Portal
+
+### Login as Client
+1. Create a client user (Admin → Team → Invite with "Client" role)
+2. Register via invite link, login
+3. **Expected:** Redirects to /portal (not dashboard)
+
+### Portal Features
+1. View project list with progress cards
+2. Click project → Overview (progress stats), Board (3-column Kanban), Links
+3. **Expected:** Read-only access, no edit capabilities
+
+### Portal Sign Out
+1. Click "Sign Out" at bottom of sidebar
+2. **Expected:** Redirects to login page
+
+---
+
+## 13. AI Pipeline
+
+### Connect ChatGPT (Admin Only)
+1. Go to sidebar → "ChatGPT"
+2. Follow device code flow — enter code at verification URL
+3. **Expected:** Connection established, all AI features enabled org-wide
+
+### AI Priority Detection
+1. Create a new task with title like "Fix authentication crash on login"
+2. **Expected:** Priority auto-classified (AI badge appears on card if ChatGPT connected)
+
+---
+
+## 14. Chrome Extension
+
+### Build Extension
 ```bash
-TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"aman@agiready.io","password":"OrbiterAdmin1!"}' \
-  | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).data.accessToken))")
-
-curl -X POST http://localhost:3000/api/v1/users/invite \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"email":"om@agiready.io","role":"internal"}'
+cd extension
+npm install
+npm run build
 ```
-Note the `inviteToken` in the response.
+Load `extension/build` folder in `chrome://extensions` (Developer mode → Load unpacked)
 
-### Test 10.2 — Invite Client
-```bash
-curl -X POST http://localhost:3000/api/v1/users/invite \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"email":"client@example.com","role":"client"}'
-```
+### Login
+1. Open extension popup
+2. If platform tab is open and logged in → auto-login
+3. Otherwise, enter credentials manually
+4. **Expected:** Shows bug capture form after login
 
-### Test 10.3 — Register Invited User
-```bash
-curl -X POST http://localhost:3000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Om Rajpal","password":"OmPassword1!","inviteToken":"PASTE_TOKEN"}'
-```
-
-### Test 10.4 — Add Members to Project
-```bash
-curl -X POST "http://localhost:3000/api/v1/projects/PROJECT_ID/members" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"userId":"OM_USER_ID","role":"member"}'
-```
+### Capture Bug
+1. Navigate to any webpage
+2. Open extension → enter title, select project
+3. **Expected:** Screenshot captured, console logs collected, bug submitted
 
 ---
 
-## Phase 11: My Work
+## 15. Info Tooltips
 
-### Test 11.1 — Assign Tasks
-71. Go to board → open a task → assign it to yourself
-72. Click **My Work** in sidebar → assigned task appears
+1. Look for (i) icons next to section headers throughout the platform
+2. Hover over them
+3. **Expected:** Tooltip appears explaining the feature
 
----
-
-## Phase 12: Command Palette
-
-### Test 12.1 — Open & Search
-73. Press **Ctrl+K** → palette opens
-74. Type "JWT" → finds the task
-75. Type "Orbiter" → finds the project
-76. Arrow keys to navigate, Enter to select, Esc to close
+**Locations:** Sprints, Bugs, Docs, Links, Env Variables, GitHub, Team Management, Project Members, Task Priority, Sprint Form
 
 ---
 
-## Phase 13: Keyboard Shortcuts
+## Quick Smoke Test Checklist
 
-### Test 13.1 — Try Shortcuts
-77. Press **?** → cheat sheet overlay
-78. Press **B** → board view
-79. Press **T** → table view
-80. Press **Esc** → close overlay
-
----
-
-## Phase 14: Favorites & Recents
-
-### Test 14.1 — Star a Project
-81. Hover project in sidebar → click star → Favorites section appears
-82. Navigate between projects → Recent section updates
-83. Refresh → persists
-
----
-
-## Phase 15: Notifications
-
-### Test 15.1 — Check Bell
-84. Click notification bell → dropdown
-85. Create a P0 bug → notification should appear
-
----
-
-## Phase 16: Settings
-
-### Test 16.1 — Profile
-86. Click **Settings** in sidebar
-87. Edit name, add skills: `react, typescript, nodejs`
-88. Save → "Saved!" confirmation
-
-### Test 16.2 — ChatGPT Connection
-89. Click **ChatGPT** in sidebar
-90. Click "Connect ChatGPT" → 8-char code, auto-copied
-91. OpenAI page opens → enter code → authorize
-92. Status changes to "Connected" with email and plan
-
-### Test 16.3 — GitHub Connection
-93. On Settings page → GitHub section → "Connect GitHub"
-94. Authorize on GitHub → redirected back → "Connected as username"
-
----
-
-## Phase 17: Client Portal
-
-### Test 17.1 — Login as Client
-95. Incognito window → login as client user
-96. Should see `/portal` with simplified sidebar, "Client" badge
-97. Only sees assigned projects
-
-### Test 17.2 — Client Board
-98. Click project → 3 columns: Planned, Working On, Completed
-99. Only `clientVisible` tasks visible
-
-### Test 17.3 — Client Restrictions
-100. No Bugs, Docs, Env, Sprint tabs visible
-101. Read-only — no drag-and-drop
-
----
-
-## Phase 18: Chrome Extension
-
-### Test 18.1 — Load Extension
-102. `chrome://extensions/` → Developer mode → Load unpacked → `F:\Agiready\extension\build\`
-103. Pin in toolbar
-
-### Test 18.2 — Auto-Login
-104. Be logged into Orbiter at `localhost:3000`
-105. Navigate to any website
-106. Click extension icon → should auto-login (no login form)
-
-### Test 18.3 — Bug Capture
-107. Select project, type description
-108. Submit → go to Orbiter Bugs tab
-109. New bug shows with: URL, browser, OS, viewport, screenshot, console logs
-
----
-
-## Phase 19: AI Features
-
-### Test 19.1 — Priority Detection
-- Create task with auth/security title → AI classifies as P0
-- Check the priority source indicator: "ChatGPT" or "Keyword fallback"
-- ChatGPT should be tried FIRST; keywords are fallback
-
-### Test 19.2 — GitHub Sync (manual)
-```bash
-curl -X GET http://localhost:3000/api/cron/github-sync \
-  -H "Authorization: Bearer c/GQXeWKsi2+lB+oZb4zJ+C8hrU7VIE/yJPLL8HxeWo="
-```
-If GitHub connected + project has repos → fetches commits, creates digest notification.
-
----
-
-## Checklist
-
-| # | Feature | Status |
-|---|---------|--------|
-| 1 | Login/Logout | ☐ |
-| 2 | Theme Toggle | ☐ |
-| 3 | Create Projects | ☐ |
-| 4 | Navigation (logo, breadcrumb) | ☐ |
-| 5 | Tasks CRUD | ☐ |
-| 6 | Kanban DnD (no ghost) | ☐ |
-| 7 | Kanban Filters | ☐ |
-| 8 | Table View (sort, bulk) | ☐ |
-| 9 | Timeline/Gantt | ☐ |
-| 10 | Sprints | ☐ |
-| 11 | Epics | ☐ |
-| 12 | Bugs + metadata display | ☐ |
-| 13 | Docs (rich editor) | ☐ |
-| 14 | Links | ☐ |
-| 15 | Env Variables (encrypt/reveal) | ☐ |
-| 16 | Invite Users | ☐ |
-| 17 | My Work | ☐ |
-| 18 | Cmd+K | ☐ |
-| 19 | Keyboard Shortcuts | ☐ |
-| 20 | Favorites & Recents | ☐ |
-| 21 | Notifications | ☐ |
-| 22 | Settings/Profile | ☐ |
-| 23 | ChatGPT OAuth | ☐ |
-| 24 | GitHub OAuth | ☐ |
-| 25 | Client Portal | ☐ |
-| 26 | Extension (auto-login + capture) | ☐ |
-| 27 | AI Priority (ChatGPT first, keyword fallback) | ☐ |
-| 28 | GitHub Sync | ☐ |
+- [ ] Login works without empty state flash
+- [ ] Projects load in sidebar
+- [ ] Create task → appears on board
+- [ ] Drag task between columns
+- [ ] Delete task from card menu
+- [ ] Create sprint → start → view board
+- [ ] Invite user → email received
+- [ ] Add member to project
+- [ ] Remove member from project
+- [ ] GitHub connect → add repo → sync
+- [ ] Notifications dropdown shows properly
+- [ ] My Work shows assigned tasks with status dropdown
+- [ ] Client portal loads projects
+- [ ] Forgot password email works
+- [ ] Theme toggle (dark/light) works
