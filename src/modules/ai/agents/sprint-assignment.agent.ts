@@ -1,4 +1,4 @@
-import { resolveApiKey } from '@/modules/ai/resolve-api-key';
+import { resolveOrgApiKey } from '@/modules/ai/resolve-org-api-key';
 import { CodexClient } from '@/modules/ai/codex-client';
 
 interface TaskSummary {
@@ -44,7 +44,7 @@ export const SprintAssignmentAgent = {
     task: TaskSummary,
   ): Promise<AssignmentSuggestion | null> {
     try {
-      const key = await resolveApiKey(userId);
+      const key = await resolveOrgApiKey();
       if (!key) return null;
 
       // Lazy-import to avoid circular dependencies

@@ -2,6 +2,17 @@
 
 import { useRouter } from 'next/navigation';
 import { Lightning, ArrowUp, Minus, ArrowDown } from '@phosphor-icons/react';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { api } from '@/shared/lib/api-client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import type { ITask, TaskPriority, TaskStatus } from '@/modules/tasks/task.types';
 
 const PRIORITY_ICONS: Record<TaskPriority, React.ReactNode> = {
@@ -11,22 +22,14 @@ const PRIORITY_ICONS: Record<TaskPriority, React.ReactNode> = {
   P3: <ArrowDown size={14} className="text-[var(--color-p3)]" />,
 };
 
-const PRIORITY_LABELS: Record<TaskPriority, string> = {
-  P0: 'P0',
-  P1: 'P1',
-  P2: 'P2',
-  P3: 'P3',
+const STATUS_CONFIG: Record<TaskStatus, { label: string; style: string }> = {
+  backlog: { label: 'Backlog', style: 'bg-subtle text-secondary' },
+  todo: { label: 'Todo', style: 'bg-[var(--color-info-muted)] text-[var(--color-info)]' },
+  in_progress: { label: 'In Progress', style: 'bg-[var(--color-accent-muted)] text-[var(--color-accent-text)]' },
+  review: { label: 'Review', style: 'bg-[var(--color-warning-muted)] text-[var(--color-warning)]' },
+  done: { label: 'Done', style: 'bg-[var(--color-success-muted)] text-[var(--color-success)]' },
 };
 
-const STATUS_COLORS: Record<TaskStatus, string> = {
-  backlog: 'bg-[var(--color-text-muted)]',
-  todo: 'bg-[var(--color-info)]',
-  in_progress: 'bg-[var(--color-accent)]',
-  review: 'bg-[var(--color-warning)]',
-  done: 'bg-[var(--color-success)]',
-};
-
-// Populated sprint shape from API
 interface PopulatedSprint {
   id: string;
   name: string;
@@ -34,14 +37,12 @@ interface PopulatedSprint {
   startDate?: string;
 }
 
-// Populated project shape from API
 interface PopulatedProject {
   id: string;
   name: string;
   slug?: string;
 }
 
-// Extended task with populated references
 export interface MyWorkTask extends Omit<ITask, 'project' | 'sprint'> {
   project: string | PopulatedProject;
   sprint?: string | PopulatedSprint;
@@ -53,39 +54,41 @@ interface MyWorkTaskRowProps {
 
 export function MyWorkTaskRow({ task }: MyWorkTaskRowProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const projectId =
-    typeof task.project === 'string' ? task.project : task.project.id;
-  const projectName =
-    typeof task.project === 'string' ? '' : task.project.name;
-  const sprintName =
-    task.sprint && typeof task.sprint !== 'string' ? task.sprint.name : undefined;
+  const projectId = typeof task.project === 'string' ? task.project : task.project.id;
+  const projectName = typeof task.project === 'string' ? '' : task.project.name;
+  const sprintName = task.sprint && typeof task.sprint !== 'string' ? task.sprint.name : undefined;
+  const statusConfig = STATUS_CONFIG[task.status];
 
-  const handleClick = () => {
-    router.push(`/projects/${projectId}/board`);
+  const handleStatusChange = async (newStatus: string | null) => {
+    if (!newStatus || newStatus === task.status) return;
+    try {
+      await api.patch(`/tasks/${task.id}/status`, { status: newStatus });
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      toast.success(`Status updated to ${STATUS_CONFIG[newStatus as TaskStatus]?.label}`);
+    } catch {
+      toast.error('Failed to update status');
+    }
   };
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={handleClick}
-      onKeyDown={(e) => e.key === 'Enter' && handleClick()}
-      className="flex cursor-pointer items-center gap-3 border-b border-subtle py-2.5 px-4 transition-colors duration-[80ms] hover:bg-subtle"
-    >
+    <div className="flex items-center gap-3 border-b border-subtle py-2.5 px-4 transition-colors duration-[80ms] hover:bg-subtle">
       {/* Priority badge */}
-      <span
-        className="flex shrink-0 items-center gap-0.5 rounded-sm px-1 py-0.5 text-[11px] font-medium bg-subtle"
-        title={`Priority: ${PRIORITY_LABELS[task.priority]}`}
-      >
+      <span className="flex shrink-0 items-center gap-0.5 rounded-sm px-1 py-0.5 text-[11px] font-medium bg-subtle">
         {PRIORITY_ICONS[task.priority]}
-        <span className="ml-0.5">{PRIORITY_LABELS[task.priority]}</span>
+        <span className="ml-0.5">{task.priority}</span>
       </span>
 
-      {/* Task title */}
-      <p className="min-w-0 flex-1 truncate text-sm font-medium text-primary">
+      {/* Task title — clickable */}
+      <button
+        type="button"
+        onClick={() => router.push(`/projects/${projectId}/board`)}
+        className="min-w-0 flex-1 truncate text-left text-sm font-medium text-primary hover:text-accent transition-colors"
+      >
         {task.title}
-      </p>
+      </button>
 
       {/* Sprint name */}
       {sprintName && (
@@ -96,16 +99,24 @@ export function MyWorkTaskRow({ task }: MyWorkTaskRowProps) {
 
       {/* Project name */}
       {projectName && (
-        <span className="shrink-0 text-xs text-[var(--color-text-muted)]">
+        <Badge variant="secondary" className="shrink-0 text-[10px]">
           {projectName}
-        </span>
+        </Badge>
       )}
 
-      {/* Status dot */}
-      <span
-        className={`h-2 w-2 shrink-0 rounded-full ${STATUS_COLORS[task.status]}`}
-        title={task.status.replace('_', ' ')}
-      />
+      {/* Status selector */}
+      <Select value={task.status} onValueChange={handleStatusChange}>
+        <SelectTrigger className={`h-6 w-auto gap-1 border-0 px-2 text-xs font-medium ${statusConfig.style}`}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="backlog">Backlog</SelectItem>
+          <SelectItem value="todo">Todo</SelectItem>
+          <SelectItem value="in_progress">In Progress</SelectItem>
+          <SelectItem value="review">Review</SelectItem>
+          <SelectItem value="done">Done</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

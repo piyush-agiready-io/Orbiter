@@ -1,4 +1,4 @@
-import { resolveApiKey } from '@/modules/ai/resolve-api-key';
+import { resolveOrgApiKey } from '@/modules/ai/resolve-org-api-key';
 import { CodexClient } from '@/modules/ai/codex-client';
 import { AI_AGENT_CONSTANTS } from '@/shared/utils/constants';
 
@@ -52,7 +52,7 @@ export const PriorityDetectionAgent = {
   ): Promise<{ priority: Priority; source: PrioritySource }> {
     // Step 1: Try ChatGPT classification first (primary)
     try {
-      const key = await resolveApiKey(userId);
+      const key = await resolveOrgApiKey();
       if (key) {
         const input = description
           ? `Task: ${title}\nDescription: ${description}`

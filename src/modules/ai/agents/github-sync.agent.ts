@@ -1,5 +1,5 @@
 import { GitHubService } from '@/modules/github/github.service';
-import { resolveApiKey } from '@/modules/ai/resolve-api-key';
+import { resolveOrgApiKey } from '@/modules/ai/resolve-org-api-key';
 import { CodexClient } from '@/modules/ai/codex-client';
 import { StatusUpdateAgent } from './status-update.agent';
 import type { GitHubRepo } from '@/modules/github/github.types';
@@ -41,7 +41,7 @@ export const GitHubSyncAgent = {
     }
 
     let summary: string | undefined;
-    const key = await resolveApiKey(userId);
+    const key = await resolveOrgApiKey();
     if (key) {
       try {
         const parts: string[] = [];
