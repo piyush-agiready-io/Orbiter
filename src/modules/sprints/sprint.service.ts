@@ -127,19 +127,21 @@ export const SprintService = {
 
   async getTaskCountPerMember(sprintId: string) {
     const tasks = await Task.find({ sprint: sprintId, status: { $ne: 'done' } })
-      .populate('assignee', 'name')
+      .populate('assignees', 'name')
       .lean();
 
     const counts = new Map<string, { userId: string; name: string; count: number }>();
     for (const task of tasks) {
-      const assignee = task.assignee as { _id: unknown; name: string } | null | undefined;
-      if (!assignee) continue;
-      const uid = String(assignee._id);
-      const existing = counts.get(uid);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        counts.set(uid, { userId: uid, name: assignee.name, count: 1 });
+      const assignees = (task.assignees ?? []) as Array<{ _id: unknown; name: string }>;
+      for (const assignee of assignees) {
+        if (!assignee) continue;
+        const uid = String(assignee._id);
+        const existing = counts.get(uid);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          counts.set(uid, { userId: uid, name: assignee.name, count: 1 });
+        }
       }
     }
 

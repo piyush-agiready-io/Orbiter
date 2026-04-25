@@ -71,19 +71,21 @@ export default function TablePage() {
       ),
     },
     {
-      key: 'assignee',
-      header: 'Assignee',
+      key: 'assignees',
+      header: 'Assignees',
       width: '140px',
       render: (task) => {
-        if (!task.assignee) return <span className="text-sm text-muted">Unassigned</span>;
-        const assignee = task.assignee as unknown as { name?: string } | string;
-        const name = typeof assignee === 'object' && assignee?.name ? assignee.name : 'Assigned';
+        if (!task.assignees || task.assignees.length === 0) return <span className="text-sm text-muted">Unassigned</span>;
+        const first = task.assignees[0] as unknown as { name?: string } | string;
+        const name = typeof first === 'object' && first?.name ? first.name : 'Assigned';
         return (
           <div className="flex items-center gap-2">
             <Avatar size="sm">
               <AvatarFallback>{name.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
-            <span className="truncate text-sm text-secondary">{name}</span>
+            <span className="truncate text-sm text-secondary">
+              {name}{task.assignees.length > 1 ? ` +${task.assignees.length - 1}` : ''}
+            </span>
           </div>
         );
       },
