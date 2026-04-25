@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getStoredUser, getStoredTokens, storeTokens, storeUser, clearAuth } from '@ext/shared/storage';
-import { API_BASE_URL } from '@ext/shared/constants';
+import { API_BASE_URL, PLATFORM_URL } from '@ext/shared/constants';
 import type { ExtUser } from '@ext/shared/types';
 
 const TOKEN_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -11,6 +11,22 @@ interface UseExtAuthReturn {
   error: string | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+}
+
+async function tryPlatformAutoLogin(): Promise<{ accessToken: string; user: ExtUser } | null> {
+  try {
+    const tabs = await chrome.tabs.query({ url: [`${PLATFORM_URL}/*`, 'http://localhost:3000/*'] });
+    if (tabs.length === 0) return null;
+
+    const tab = tabs[0];
+    if (!tab.id) return null;
+
+    const response = await chrome.tabs.sendMessage(tab.id, { type: 'CHECK_PLATFORM_AUTH' });
+    if (response?.success && response.data?.accessToken && response.data?.user) {
+      return { accessToken: response.data.accessToken, user: response.data.user };
+    }
+  } catch {}
+  return null;
 }
 
 export function useExtAuth(): UseExtAuthReturn {
@@ -40,7 +56,19 @@ export function useExtAuth(): UseExtAuthReturn {
           }
         }
 
+        const platformAuth = await tryPlatformAutoLogin();
+        if (!mountedRef.current) return;
+
+        if (platformAuth) {
+          await storeTokens(platformAuth.accessToken, TOKEN_DURATION_MS).catch(() => {});
+          await storeUser(platformAuth.user).catch(() => {});
+          setUser(platformAuth.user);
+          setIsLoading(false);
+          return;
+        }
+
         if (mountedRef.current) {
+          await clearAuth().catch(() => {});
           setUser(null);
           setIsLoading(false);
         }

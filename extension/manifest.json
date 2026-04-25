@@ -14,6 +14,7 @@
   "host_permissions": [
     "http://localhost:3000/*",
     "https://*.orbiter.io/*",
+    "https://orbiteragiready.vercel.app/*",
     "https://*.r2.cloudflarestorage.com/*"
   ],
   "action": {
@@ -34,6 +35,11 @@
       "matches": ["<all_urls>"],
       "js": ["content-script.js"],
       "run_at": "document_start"
+    },
+    {
+      "matches": ["https://orbiteragiready.vercel.app/*", "http://localhost:3000/*"],
+      "js": ["platform-auth-bridge.js"],
+      "run_at": "document_idle"
     }
   ],
   "icons": {

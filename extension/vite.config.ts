@@ -25,6 +25,7 @@ export default defineConfig({
         popup: resolve(__dirname, 'popup/index.html'),
         'service-worker': resolve(__dirname, 'background/service-worker.ts'),
         'content-script': resolve(__dirname, 'content/content-script.ts'),
+        'platform-auth-bridge': resolve(__dirname, 'platform-auth-bridge.ts'),
       },
       output: {
         entryFileNames: '[name].js',
