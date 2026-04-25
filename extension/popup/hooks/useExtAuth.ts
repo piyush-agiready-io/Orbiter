@@ -3,7 +3,7 @@ import { getStoredUser, getStoredTokens, storeTokens, storeUser, clearAuth } fro
 import { API_BASE_URL } from '@ext/shared/constants';
 import type { ExtUser } from '@ext/shared/types';
 
-const ACCESS_TOKEN_DURATION_MS = 15 * 60 * 1000;
+const TOKEN_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface UseExtAuthReturn {
   user: ExtUser | null;
@@ -24,7 +24,6 @@ export function useExtAuth(): UseExtAuthReturn {
 
     async function checkAuth() {
       try {
-        // Check stored token + user from chrome.storage
         const [storedTokens, storedUser] = await Promise.all([
           getStoredTokens().catch(() => null),
           getStoredUser().catch(() => null),
@@ -33,7 +32,6 @@ export function useExtAuth(): UseExtAuthReturn {
         if (!mountedRef.current) return;
 
         if (storedTokens?.accessToken && storedUser) {
-          // Verify token is not expired locally (skip network call for speed)
           const isExpired = storedTokens.tokenExpiry && Date.now() >= storedTokens.tokenExpiry - 60000;
           if (!isExpired) {
             setUser(storedUser);
@@ -42,40 +40,7 @@ export function useExtAuth(): UseExtAuthReturn {
           }
         }
 
-        // Try auto-login: call platform refresh endpoint with cookie
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 3000);
-
-          const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-            method: 'POST',
-            credentials: 'include',
-            signal: controller.signal,
-          });
-          clearTimeout(timeout);
-
-          if (!mountedRef.current) return;
-
-          if (res.ok) {
-            const data = await res.json();
-            if (data.success && data.data?.accessToken) {
-              const userData = data.data.user || storedUser;
-              if (userData && mountedRef.current) {
-                await storeTokens(data.data.accessToken, ACCESS_TOKEN_DURATION_MS).catch(() => {});
-                await storeUser(userData).catch(() => {});
-                setUser(userData);
-                setIsLoading(false);
-                return;
-              }
-            }
-          }
-        } catch {
-          // Auto-login failed (CORS, timeout, network) — that's fine, show login form
-        }
-
-        // No valid session — clear stale data and show login form
         if (mountedRef.current) {
-          await clearAuth().catch(() => {});
           setUser(null);
           setIsLoading(false);
         }
@@ -102,7 +67,6 @@ export function useExtAuth(): UseExtAuthReturn {
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -110,7 +74,7 @@ export function useExtAuth(): UseExtAuthReturn {
 
       if (data.success && data.data?.accessToken) {
         const userData = data.data.user;
-        await storeTokens(data.data.accessToken, ACCESS_TOKEN_DURATION_MS).catch(() => {});
+        await storeTokens(data.data.accessToken, TOKEN_DURATION_MS).catch(() => {});
         await storeUser(userData).catch(() => {});
         setUser(userData);
         setIsLoading(false);

@@ -115,7 +115,7 @@ export default function ProjectSettingsPage() {
 
   const removeMember = useMutation({
     mutationFn: (payload: { userId: string; role: string }) =>
-      api.delete(`/projects/${params.id}/members`, payload),
+      api.post(`/projects/${params.id}/members`, { ...payload, action: 'remove' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', params.id] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });

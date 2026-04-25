@@ -27,6 +27,7 @@ export const projectQuerySchema = z.object({
 export const memberActionSchema = z.object({
   userId: z.string().min(1),
   role: z.enum(['member', 'client']).default('member'),
+  action: z.enum(['add', 'remove']).optional(),
 });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;

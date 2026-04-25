@@ -7,7 +7,13 @@ export const POST = apiHandler({
   middleware: [requireRole('admin')],
   validate: { body: memberActionSchema },
   handler: async (_req, ctx) => {
-    const body = ctx.body as { userId: string; role: 'member' | 'client' };
+    const body = ctx.body as { userId: string; role: 'member' | 'client'; action?: string };
+
+    if (body.action === 'remove') {
+      const project = await ProjectService.removeMember(ctx.params.id, body.userId);
+      return { data: project.toJSON() };
+    }
+
     const project = await ProjectService.addMember(ctx.params.id, body.userId, body.role);
     return { data: project.toJSON(), status: 201 };
   },
