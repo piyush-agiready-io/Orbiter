@@ -147,13 +147,19 @@ export function KanbanCard({ task, projectId, onClick }: KanbanCardProps) {
                 </span>
               ))}
             </div>
-            {task.assignee && (
-              <Avatar
-                size={20}
-                name={typeof task.assignee === 'string' ? task.assignee : (task.assignee as unknown as { name: string }).name}
-                variant="beam"
-                colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9']}
-              />
+            {task.assignees?.length > 0 && (
+              <div className="flex -space-x-1.5">
+                {task.assignees.slice(0, 3).map((a, i) => (
+                  <div key={i} className="ring-1 ring-surface rounded-full">
+                    <Avatar
+                      size={20}
+                      name={typeof a === 'string' ? a : (a as unknown as { name: string }).name}
+                      variant="beam"
+                      colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9']}
+                    />
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

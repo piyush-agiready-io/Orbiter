@@ -9,7 +9,7 @@ export const createTaskSchema = z.object({
   priority: z.enum(['P0', 'P1', 'P2', 'P3']).default('P2'),
   status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']).default('backlog'),
   sprintId: objectId.optional(),
-  assigneeId: objectId.optional(),
+  assigneeIds: z.array(objectId).default([]),
   tags: z.array(z.string().trim()).default([]),
   clientVisible: z.boolean().default(false),
 });
@@ -21,7 +21,7 @@ export const updateTaskSchema = z.object({
   priority: z.enum(['P0', 'P1', 'P2', 'P3']).optional(),
   status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']).optional(),
   sprintId: objectId.nullable().optional(),
-  assigneeId: objectId.nullable().optional(),
+  assigneeIds: z.array(objectId).optional(),
   tags: z.array(z.string().trim()).optional(),
   clientVisible: z.boolean().optional(),
   order: z.number().int().min(0).optional(),
@@ -49,7 +49,7 @@ export const bulkUpdateSchema = z.object({
   update: z.object({
     status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']).optional(),
     priority: z.enum(['P0', 'P1', 'P2', 'P3']).optional(),
-    assigneeId: objectId.nullable().optional(),
+    assigneeIds: z.array(objectId).optional(),
     sprintId: objectId.nullable().optional(),
   }),
 });

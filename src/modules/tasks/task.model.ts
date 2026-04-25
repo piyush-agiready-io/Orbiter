@@ -10,7 +10,7 @@ export interface TaskDocument extends Document {
   status: TaskStatus;
   project: Schema.Types.ObjectId;
   sprint?: Schema.Types.ObjectId;
-  assignee?: Schema.Types.ObjectId;
+  assignees: Schema.Types.ObjectId[];
   tags: string[];
   clientVisible: boolean;
   linkedBugs: Schema.Types.ObjectId[];
@@ -45,7 +45,7 @@ const taskSchema = new Schema<TaskDocument>(
     },
     project: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
     sprint: { type: Schema.Types.ObjectId, ref: 'Sprint' },
-    assignee: { type: Schema.Types.ObjectId, ref: 'User' },
+    assignees: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     tags: { type: [String], default: [] },
     clientVisible: { type: Boolean, default: false },
     linkedBugs: [{ type: Schema.Types.ObjectId, ref: 'Bug' }],
@@ -66,7 +66,7 @@ const taskSchema = new Schema<TaskDocument>(
 
 taskSchema.index({ project: 1, status: 1 });
 taskSchema.index({ sprint: 1 });
-taskSchema.index({ assignee: 1 });
+taskSchema.index({ assignees: 1 });
 taskSchema.index({ project: 1, status: 1, order: 1 });
 
 export const Task =

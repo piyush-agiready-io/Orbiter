@@ -13,7 +13,7 @@ export interface ITask {
   status: TaskStatus;
   project: string;
   sprint?: string;
-  assignee?: string;
+  assignees: string[];
   tags: string[];
   clientVisible: boolean;
   linkedBugs: string[];

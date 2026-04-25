@@ -59,10 +59,10 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         <p className="text-sm font-medium text-primary leading-snug line-clamp-2">
           {task.title}
         </p>
-        {task.assignee && typeof task.assignee === 'object' && (
+        {task.assignees?.[0]s?.[0] && typeof task.assignees?.[0]s?.[0] === 'object' && (
           <Avatar
             size={24}
-            name={(task.assignee as { name: string }).name}
+            name={(task.assignees?.[0]s?.[0] as { name: string }).name}
             variant="beam"
             colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#8B8B9A', '#2E7D57']}
           />

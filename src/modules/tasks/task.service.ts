@@ -1,13 +1,46 @@
 import { Task } from '@/modules/tasks/task.model';
+import { User } from '@/modules/users/user.model';
 import { PriorityDetectionAgent } from '@/modules/ai/agents/priority-detection.agent';
 import { NotFoundError } from '@/shared/middleware/api-handler';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import { escapeRegExp } from '@/shared/utils/escape-regex';
+import { env } from '@/config/env';
 import type { CreateTaskInput, UpdateTaskInput, UpdateStatusInput, BulkUpdateInput } from './task.validator';
+
+async function notifyAssignees(assigneeIds: string[], taskTitle: string, projectId: string, userId?: string) {
+  if (assigneeIds.length === 0) return;
+  try {
+    const { NotificationService } = await import('@/modules/notifications/notification.service');
+    const { sendMentionEmail } = await import('@/shared/lib/email');
+    const author = userId ? await User.findById(userId).select('name').lean() : null;
+    const authorName = author?.name ?? 'Someone';
+    const assignees = await User.find({ _id: { $in: assigneeIds } }).select('name email').lean();
+    const link = `/projects/${projectId}/board`;
+
+    await Promise.all(
+      assignees.map(async (a) => {
+        await NotificationService.notify(
+          a._id.toString(),
+          'task_assigned',
+          `${authorName} assigned you a task`,
+          taskTitle,
+          link,
+        );
+        await sendMentionEmail(
+          a.email,
+          authorName,
+          `You've been assigned: "${taskTitle}"`,
+          'a task',
+          `${env.NEXT_PUBLIC_APP_URL}${link}`,
+        ).catch(() => {});
+      }),
+    );
+  } catch {}
+}
 
 export const TaskService = {
   async create(projectId: string, data: CreateTaskInput, userId?: string) {
-    const { sprintId, assigneeId, ...rest } = data;
+    const { sprintId, assigneeIds, ...rest } = data;
     const maxOrder = await Task.findOne({ project: projectId, status: rest.status ?? 'backlog' })
       .sort({ order: -1 })
       .select('order')
@@ -17,23 +50,21 @@ export const TaskService = {
       ...rest,
       project: projectId,
       sprint: sprintId || undefined,
-      assignee: assigneeId || undefined,
+      assignees: assigneeIds ?? [],
       order: (maxOrder?.order ?? -1) + 1,
     });
 
-    // Fire-and-forget priority detection -- never blocks task creation
     if (userId && task.prioritySource !== 'manual') {
       PriorityDetectionAgent.classify(userId, task.title, task.description)
         .then(async ({ priority, source }) => {
           if (source !== 'default') {
-            await Task.updateOne(
-              { _id: task._id },
-              { priority, prioritySource: 'ai' },
-            );
+            await Task.updateOne({ _id: task._id }, { priority, prioritySource: 'ai' });
           }
         })
         .catch((err) => console.error('Priority detection failed silently:', err));
     }
+
+    notifyAssignees(assigneeIds ?? [], task.title, projectId, userId);
 
     return task;
   },
@@ -54,7 +85,7 @@ export const TaskService = {
     if (query.status) filter.status = query.status;
     if (query.priority) filter.priority = query.priority;
     if (query.type) filter.type = query.type;
-    if (query.assignee) filter.assignee = query.assignee;
+    if (query.assignee) filter.assignees = query.assignee;
     if (query.sprint) filter.sprint = query.sprint;
     if (query.search) {
       filter.title = { $regex: escapeRegExp(query.search), $options: 'i' };
@@ -67,7 +98,7 @@ export const TaskService = {
 
     const [tasks, total] = await Promise.all([
       Task.find(filter)
-        .populate('assignee', 'name email avatar')
+        .populate('assignees', 'name email avatar')
         .populate('sprint', 'name')
         .skip(skip)
         .limit(limit)
@@ -80,17 +111,17 @@ export const TaskService = {
 
   async getById(id: string) {
     const task = await Task.findById(id)
-      .populate('assignee', 'name email avatar')
+      .populate('assignees', 'name email avatar')
       .populate('sprint', 'name status');
     if (!task) throw new NotFoundError('Task');
     return task;
   },
 
   async update(id: string, data: UpdateTaskInput) {
-    const { sprintId, assigneeId, ...rest } = data;
+    const { sprintId, assigneeIds, ...rest } = data;
     const updateData: Record<string, unknown> = { ...rest };
     if (sprintId !== undefined) updateData.sprint = sprintId;
-    if (assigneeId !== undefined) updateData.assignee = assigneeId;
+    if (assigneeIds !== undefined) updateData.assignees = assigneeIds;
 
     const task = await Task.findByIdAndUpdate(
       id,
@@ -119,7 +150,7 @@ export const TaskService = {
     const updateData: Record<string, unknown> = {};
     if (update.status) updateData.status = update.status;
     if (update.priority) updateData.priority = update.priority;
-    if (update.assigneeId !== undefined) updateData.assignee = update.assigneeId;
+    if (update.assigneeIds !== undefined) updateData.assignees = update.assigneeIds;
     if (update.sprintId !== undefined) updateData.sprint = update.sprintId;
 
     return Task.updateMany(
@@ -134,11 +165,7 @@ export const TaskService = {
     return task;
   },
 
-  async reorderInColumn(
-    projectId: string,
-    status: string,
-    orderedIds: string[],
-  ) {
+  async reorderInColumn(projectId: string, status: string, orderedIds: string[]) {
     const ops = orderedIds.map((id, index) => ({
       updateOne: {
         filter: { _id: id, project: projectId, status },
@@ -152,10 +179,7 @@ export const TaskService = {
     projectId: string,
     query: { page?: number; limit?: number; status?: string; sort?: string },
   ) {
-    const filter: Record<string, unknown> = {
-      project: projectId,
-      clientVisible: true,
-    };
+    const filter: Record<string, unknown> = { project: projectId, clientVisible: true };
     if (query.status) filter.status = query.status;
 
     const page = query.page ?? PAGINATION_DEFAULTS.PAGE;
@@ -172,7 +196,7 @@ export const TaskService = {
         .sort(sortObj)
         .skip(skip)
         .limit(limit)
-        .populate('assignee', 'name email avatar'),
+        .populate('assignees', 'name email avatar'),
       Task.countDocuments(filter),
     ]);
 
@@ -180,29 +204,17 @@ export const TaskService = {
   },
 
   async getClientProjectProgress(projectId: string) {
-    const tasks = await Task.find({
-      project: projectId,
-      clientVisible: true,
-    }).select('status').lean();
-
+    const tasks = await Task.find({ project: projectId, clientVisible: true }).select('status').lean();
     const total = tasks.length;
     const done = tasks.filter((t) => t.status === 'done').length;
-    const inProgress = tasks.filter((t) =>
-      ['in_progress', 'review'].includes(t.status),
-    ).length;
-    const backlog = tasks.filter((t) =>
-      ['backlog', 'todo'].includes(t.status),
-    ).length;
+    const inProgress = tasks.filter((t) => ['in_progress', 'review'].includes(t.status)).length;
+    const backlog = tasks.filter((t) => ['backlog', 'todo'].includes(t.status)).length;
     const percentage = total > 0 ? Math.round((done / total) * 100) : 0;
-
     return { total, done, inProgress, backlog, percentage };
   },
 
-  async getMyTasks(
-    userId: string,
-    options: { includeDone?: boolean } = {},
-  ) {
-    const filter: Record<string, unknown> = { assignee: userId };
+  async getMyTasks(userId: string, options: { includeDone?: boolean } = {}) {
+    const filter: Record<string, unknown> = { assignees: userId };
     if (!options.includeDone) {
       filter.status = { $ne: 'done' };
     }
@@ -212,17 +224,13 @@ export const TaskService = {
       .populate('sprint', 'name endDate');
   },
 
-  async reorderTask(
-    taskId: string,
-    data: { status: string; order: number },
-  ) {
+  async reorderTask(taskId: string, data: { status: string; order: number }) {
     const task = await Task.findByIdAndUpdate(
       taskId,
       { status: data.status, order: data.order },
       { returnDocument: 'after', runValidators: true },
     )
-      .populate('assignee', 'name email avatar');
-
+      .populate('assignees', 'name email avatar');
     if (!task) throw new NotFoundError('Task');
     return task;
   },

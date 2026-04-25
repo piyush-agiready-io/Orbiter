@@ -105,15 +105,15 @@ export function TableView({ projectId, filters, onTaskClick }: TableViewProps) {
                 <Badge variant="secondary" className="text-[11px]">{task.type}</Badge>
               </td>
               <td className="px-4 py-2.5">
-                {task.assignee && typeof task.assignee === 'object' ? (
+                {task.assignees?.[0] && typeof task.assignees?.[0] === 'object' ? (
                   <div className="flex items-center gap-2">
                     <Avatar
                       size={20}
-                      name={(task.assignee as { name: string }).name}
+                      name={(task.assignees?.[0] as { name: string }).name}
                       variant="beam"
                       colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#8B8B9A', '#2E7D57']}
                     />
-                    <span className="text-sm text-secondary">{(task.assignee as { name: string }).name}</span>
+                    <span className="text-sm text-secondary">{(task.assignees?.[0] as { name: string }).name}</span>
                   </div>
                 ) : (
                   <span className="text-sm text-[var(--color-text-muted)]">Unassigned</span>

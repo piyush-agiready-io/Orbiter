@@ -92,17 +92,20 @@ export function TaskDetailPanel({ taskId, projectId, onClose }: TaskDetailPanelP
             <Badge variant="secondary">{task.type}</Badge>
           </div>
 
-          {task.assignee && typeof task.assignee === 'object' && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Assignee</span>
-              <div className="flex items-center gap-2">
-                <Avatar
-                  size={20}
-                  name={(task.assignee as { name: string }).name}
-                  variant="beam"
-                  colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#8B8B9A', '#2E7D57']}
-                />
-                <span className="text-sm text-primary">{(task.assignee as { name: string }).name}</span>
+          {task.assignees?.length > 0 && (
+            <div>
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Assignees</span>
+              <div className="mt-1 space-y-1.5">
+                {task.assignees.map((a, i) => {
+                  const user = typeof a === 'string' ? null : (a as unknown as { name: string });
+                  if (!user) return null;
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      <Avatar size={20} name={user.name} variant="beam" colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#8B8B9A', '#2E7D57']} />
+                      <span className="text-sm text-primary">{user.name}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

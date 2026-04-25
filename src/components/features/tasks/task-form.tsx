@@ -1,8 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Avatar from 'boring-avatars';
+import { X } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { useCreateTask } from '@/hooks/queries/use-tasks';
 import { useSprints } from '@/hooks/queries/use-sprints';
+import { useUsers } from '@/hooks/queries/use-users';
 import { InfoTip } from '@/components/shared/info-tip';
 
 const formSchema = z.object({
@@ -44,6 +48,11 @@ interface TaskFormProps {
 export function TaskForm({ projectId, open, onClose, defaultStatus = 'backlog' }: TaskFormProps) {
   const createTask = useCreateTask(projectId);
   const { data: sprintsData } = useSprints(projectId);
+  const { data: usersData } = useUsers();
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+
+  const allUsers = ((usersData as { users?: { id: string; name: string; email: string; role: string }[] })?.users ?? [])
+    .filter((u) => u.role !== 'client');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -57,13 +66,23 @@ export function TaskForm({ projectId, open, onClose, defaultStatus = 'backlog' }
   });
 
   const onSubmit = (values: FormValues) => {
-    createTask.mutate(values, {
+    createTask.mutate({ ...values, assigneeIds: selectedAssignees }, {
       onSuccess: () => {
         form.reset();
+        setSelectedAssignees([]);
         onClose();
       },
     });
   };
+
+  const toggleAssignee = (userId: string) => {
+    setSelectedAssignees((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+  };
+
+  const selectedUsers = allUsers.filter((u) => selectedAssignees.includes(u.id));
+  const availableUsers = allUsers.filter((u) => !selectedAssignees.includes(u.id));
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -75,7 +94,7 @@ export function TaskForm({ projectId, open, onClose, defaultStatus = 'backlog' }
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label className="text-sm font-medium text-primary">Title</Label>
-            <Input {...form.register('title')} placeholder="What needs to be done?" className="mt-1.5" />
+            <Input {...form.register('title')} placeholder="What needs to be done?" className="mt-1.5" autoFocus />
             {form.formState.errors.title && (
               <p className="mt-1 text-xs text-[var(--color-error)]">{form.formState.errors.title.message}</p>
             )}
@@ -106,7 +125,7 @@ export function TaskForm({ projectId, open, onClose, defaultStatus = 'backlog' }
             <div>
               <div className="flex items-center gap-1.5">
                 <Label className="text-sm font-medium text-primary">Priority</Label>
-                <InfoTip text="P0: Critical (security, crashes). P1: High (broken features). P2: Medium (default). P3: Low (polish, nice-to-have). AI auto-classifies if ChatGPT is connected." />
+                <InfoTip text="P0: Critical. P1: High. P2: Medium (default). P3: Low. AI auto-classifies if ChatGPT connected." />
               </div>
               <Select value={form.watch('priority')} onValueChange={(v) => form.setValue('priority', v as FormValues['priority'])}>
                 <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
@@ -131,6 +150,39 @@ export function TaskForm({ projectId, open, onClose, defaultStatus = 'backlog' }
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Assignees multi-select */}
+          <div>
+            <Label className="text-sm font-medium text-primary">Assign to</Label>
+            {selectedUsers.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {selectedUsers.map((u) => (
+                  <span
+                    key={u.id}
+                    className="inline-flex items-center gap-1 rounded-full bg-accent-muted px-2 py-0.5 text-xs font-medium text-accent-text"
+                  >
+                    <Avatar size={14} name={u.name} variant="beam" colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9']} />
+                    {u.name}
+                    <button type="button" onClick={() => toggleAssignee(u.id)} className="ml-0.5 hover:text-accent">
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {availableUsers.length > 0 && (
+              <Select value="" onValueChange={(v) => v && toggleAssignee(v)}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select team members..." /></SelectTrigger>
+                <SelectContent>
+                  {availableUsers.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} ({u.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
