@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -10,7 +10,6 @@ import {
   GitPullRequest,
   GitMerge,
   CheckCircle,
-  Clock,
   Sparkle,
   CircleNotch,
   Trash,
@@ -28,20 +27,12 @@ import {
   useGitHubRepos,
   useGitHubReadme,
 } from '@/hooks/queries/use-github';
-import type { SyncRecord, GitHubCommit, GitHubPR } from '@/hooks/queries/use-github';
+import type { GitHubCommit, GitHubPR } from '@/hooks/queries/use-github';
 import { useProject } from '@/hooks/queries/use-projects';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { InfoTip } from '@/components/shared/info-tip';
 import { SyncProgress } from './sync-progress';
@@ -55,21 +46,6 @@ interface GitHubRepo {
   repo: string;
 }
 
-const PR_STATE_CONFIG: Record<string, { icon: React.ReactNode; style: string }> = {
-  open: {
-    icon: <GitPullRequest size={14} weight="bold" />,
-    style: 'bg-[var(--color-success-muted)] text-[var(--color-success)]',
-  },
-  merged: {
-    icon: <GitMerge size={14} weight="bold" />,
-    style: 'bg-[var(--color-accent-muted)] text-[var(--color-accent-text)]',
-  },
-  closed: {
-    icon: <CheckCircle size={14} />,
-    style: 'bg-[var(--color-error-muted)] text-[var(--color-error)]',
-  },
-};
-
 export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   const { data, isLoading } = useGitHubData(projectId);
   const { data: projectData } = useProject(projectId);
@@ -78,11 +54,9 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   const disconnectGitHub = useDisconnectGitHub(projectId);
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [selectedRepoToAdd, setSelectedRepoToAdd] = useState('');
+
   const [repoSearch, setRepoSearch] = useState('');
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
-  const [readmeRepo, setReadmeRepo] = useState<{ owner: string; repo: string } | null>(null);
   const [syncRunning, setSyncRunning] = useState(false);
   const [syncComplete, setSyncComplete] = useState(false);
   const [syncResult, setSyncResult] = useState<{ commitCount?: number; prCount?: number } | undefined>();
@@ -90,22 +64,17 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   const project = projectData as { githubRepos?: GitHubRepo[] } | undefined;
   const githubRepos = project?.githubRepos ?? [];
 
-  const { data: availableReposData } = useGitHubRepos(projectId, !!data?.githubConnected);
+  const { data: availableReposData } = useGitHubRepos(projectId, !!data?.githubConnected && githubRepos.length === 0);
   const availableRepos = (availableReposData as { repos?: Array<{ owner: string; repo: string; fullName: string; private: boolean; description: string | null; linked: boolean }> })?.repos ?? [];
   const unlinkedRepos = availableRepos.filter((r) => !r.linked);
 
+  const firstRepo = githubRepos[0];
   const { data: readmeData } = useGitHubReadme(
     projectId,
-    readmeRepo?.owner ?? '',
-    readmeRepo?.repo ?? '',
+    firstRepo?.owner ?? '',
+    firstRepo?.repo ?? '',
   );
   const readme = (readmeData as { readme?: string | null })?.readme ?? null;
-
-  useEffect(() => {
-    if (githubRepos.length > 0 && !readmeRepo) {
-      setReadmeRepo({ owner: githubRepos[0].owner, repo: githubRepos[0].repo });
-    }
-  }, [githubRepos, readmeRepo]);
 
   const updateRepos = useMutation({
     mutationFn: (repos: GitHubRepo[]) =>
@@ -156,6 +125,7 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   };
 
   const handleRemoveRepo = (target: GitHubRepo) => {
+    if (!confirm(`Remove ${target.owner}/${target.repo}?`)) return;
     updateRepos.mutate(
       githubRepos.filter((r) => !(r.owner === target.owner && r.repo === target.repo)),
       { onSuccess: () => toast.success(`Removed ${target.owner}/${target.repo}`) },
@@ -173,6 +143,7 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
     );
   }
 
+  // State 1: Not connected
   if (!data?.githubConnected) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-6">
@@ -189,22 +160,76 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
     );
   }
 
+  // State 2: Connected but no repos — show search
+  if (githubRepos.length === 0) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-h2 font-semibold text-primary">GitHub</h2>
+              <InfoTip text="Connect GitHub to sync commits and PRs. AI generates summaries. Commits with 'TASK-123' or 'fixes #123' auto-update task status." />
+            </div>
+            <p className="mt-0.5 text-sm text-secondary">
+              Connected as <strong>{data.githubUsername}</strong>
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={handleDisconnect}>
+            <SignOut size={14} className="mr-1" /> Disconnect
+          </Button>
+        </div>
+
+        {justConnected && (
+          <div className="mb-4 flex items-center gap-2 rounded-md bg-[var(--color-success-muted)] px-3 py-2">
+            <CheckCircle size={16} weight="fill" className="text-[var(--color-success)]" />
+            <p className="text-sm text-[var(--color-success)]">GitHub connected. Search and select a repository to get started.</p>
+          </div>
+        )}
+
+        <div className="rounded-lg border border-subtle bg-surface p-6">
+          <div className="text-center mb-4">
+            <GitBranch size={32} className="mx-auto mb-2 text-[var(--color-text-muted)]" />
+            <h3 className="text-sm font-semibold text-primary">Select a Repository</h3>
+            <p className="mt-1 text-xs text-secondary">Search your GitHub repositories to link one to this project.</p>
+          </div>
+          <RepoSearchInput
+            repos={unlinkedRepos}
+            search={repoSearch}
+            onSearchChange={setRepoSearch}
+            open={repoDropdownOpen}
+            onOpenChange={setRepoDropdownOpen}
+            onSelect={(fullName) => {
+              const [owner, repo] = fullName.split('/');
+              updateRepos.mutate([{ owner, repo }], {
+                onSuccess: () => {
+                  setRepoSearch('');
+                  toast.success(`Added ${fullName}`);
+                  setTimeout(() => handleSync(), 500);
+                },
+              });
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // State 3: Connected with repos — full dashboard
   const allCommits = data.syncs.flatMap((s) => s.commits);
   const allPRs = data.syncs.flatMap((s) => s.pullRequests);
-  const summaries = data.syncs.filter((s) => s.summary);
+  const latestSummary = data.syncs.find((s) => s.summary);
 
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-h2 font-semibold text-primary">GitHub</h2>
-            <InfoTip text="Connect GitHub to sync commits and PRs. AI generates summaries of synced activity. Commits with 'TASK-123' or 'fixes #123' auto-update task status." />
+            <InfoTip text="Commits with 'TASK-123' or 'fixes #123' auto-update task status. Syncs every 6 hours automatically." />
           </div>
           <p className="mt-0.5 text-sm text-secondary">
             Connected as <strong>{data.githubUsername}</strong>
-            {' — '}{data.repoCount} repo{data.repoCount !== 1 ? 's' : ''} linked
             {data.lastSyncAt && (
               <> — synced {formatDistanceToNow(new Date(data.lastSyncAt), { addSuffix: true })}</>
             )}
@@ -214,8 +239,8 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
           <Button size="sm" variant="outline" onClick={handleDisconnect}>
             <SignOut size={14} className="mr-1" /> Disconnect
           </Button>
-          <Button size="sm" onClick={handleSync} disabled={triggerSync.isPending || data.repoCount === 0}>
-            {triggerSync.isPending ? (
+          <Button size="sm" onClick={handleSync} disabled={syncRunning}>
+            {syncRunning ? (
               <><CircleNotch size={14} className="mr-1.5 animate-spin" /> Syncing...</>
             ) : (
               <><ArrowClockwise size={14} className="mr-1.5" /> Sync Now</>
@@ -224,301 +249,230 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
         </div>
       </div>
 
-      {justConnected && (
-        <div className="mb-4 flex items-center gap-2 rounded-md bg-[var(--color-success-muted)] px-3 py-2">
-          <CheckCircle size={16} weight="fill" className="text-[var(--color-success)]" />
-          <p className="text-sm text-[var(--color-success)]">GitHub connected. Select a repository below to start syncing.</p>
-        </div>
-      )}
-
       {/* Sync Progress */}
       {(syncRunning || syncComplete) && (
-        <div className="mb-6">
-          <SyncProgress isRunning={syncRunning} isComplete={syncComplete} result={syncResult} />
+        <SyncProgress isRunning={syncRunning} isComplete={syncComplete} result={syncResult} />
+      )}
+
+      {/* Connected Repo */}
+      <div className="rounded-lg border border-subtle bg-surface p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-subtle">
+              <GithubLogo size={20} weight="fill" className="text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-primary font-mono">{firstRepo.owner}/{firstRepo.repo}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">Auto-syncs every 6 hours</p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon-sm" className="text-[var(--color-error)]" onClick={() => handleRemoveRepo(firstRepo)}>
+            <Trash size={14} />
+          </Button>
+        </div>
+      </div>
+
+      {/* AI Summary */}
+      {latestSummary?.summary && (
+        <div className="rounded-lg border border-subtle bg-surface p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkle size={16} weight="fill" className="text-accent" />
+            <h3 className="text-sm font-semibold text-primary">Latest AI Summary</h3>
+          </div>
+          <p className="text-sm text-secondary leading-relaxed">{latestSummary.summary}</p>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+            {latestSummary.commits.length} commits, {latestSummary.pullRequests.length} PRs — {formatDistanceToNow(new Date(latestSummary.createdAt), { addSuffix: true })}
+          </p>
         </div>
       )}
 
-      {/* Repos Section */}
-      <div className="mb-6 rounded-lg border border-subtle bg-surface p-4">
-        <h3 className="text-sm font-semibold text-primary mb-3">Repositories</h3>
-        {githubRepos.length > 0 && (
-          <div className="space-y-1.5 mb-3">
-            {githubRepos.map((repo) => (
-              <div
-                key={`${repo.owner}/${repo.repo}`}
-                className="group flex items-center justify-between rounded-md border border-[var(--color-border-subtle)] px-3 py-2"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <GitBranch size={14} className="text-secondary" />
-                  <span className="font-mono text-xs text-primary">{repo.owner}/{repo.repo}</span>
+      {/* README Overview */}
+      {readme && (
+        <div className="rounded-lg border border-subtle bg-surface p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen size={16} className="text-secondary" />
+            <h3 className="text-sm font-semibold text-primary">Project Overview</h3>
+          </div>
+          <pre className="whitespace-pre-wrap text-xs leading-relaxed text-secondary font-sans">{readme}</pre>
+        </div>
+      )}
+
+      {/* Recent Commits */}
+      <div className="rounded-lg border border-subtle bg-surface">
+        <div className="flex items-center justify-between border-b border-subtle px-4 py-3">
+          <div className="flex items-center gap-2">
+            <GitCommit size={16} className="text-secondary" />
+            <h3 className="text-sm font-semibold text-primary">Recent Commits</h3>
+          </div>
+          <span className="text-xs text-[var(--color-text-muted)]">{allCommits.length} total</span>
+        </div>
+        {allCommits.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-secondary">No commits synced yet. Click "Sync Now" to fetch.</div>
+        ) : (
+          <div className="divide-y divide-subtle">
+            {allCommits.slice(0, 10).map((commit, i) => (
+              <div key={`${commit.sha}-${i}`} className="flex items-start gap-3 px-4 py-2.5">
+                <GitCommit size={14} className="mt-0.5 shrink-0 text-[var(--color-text-muted)]" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-primary truncate">{commit.message.split('\n')[0]}</p>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                    <span>{commit.author}</span>
+                    <span className="font-mono">{commit.sha.slice(0, 7)}</span>
+                    <span>{formatDistanceToNow(new Date(commit.date), { addSuffix: true })}</span>
+                  </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-[var(--color-error)] opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => handleRemoveRepo(repo)}
-                >
-                  <Trash size={14} />
-                </Button>
               </div>
             ))}
           </div>
         )}
-        <div className="relative">
-          <div className="relative">
-            <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input
-              type="text"
-              placeholder="Search your repositories..."
-              value={repoSearch}
-              onChange={(e) => { setRepoSearch(e.target.value); setRepoDropdownOpen(true); }}
-              onFocus={() => setRepoDropdownOpen(true)}
-              className="h-8 w-full rounded-md border border-[var(--color-border-default)] bg-surface pl-8 pr-3 text-xs font-mono text-primary placeholder:text-[var(--color-text-muted)] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-            />
-          </div>
-          {repoDropdownOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setRepoDropdownOpen(false)} />
-              <div className="absolute left-0 right-0 top-9 z-50 max-h-56 overflow-y-auto rounded-lg border border-subtle bg-surface shadow-md">
-                {unlinkedRepos.length === 0 ? (
-                  <div className="px-3 py-3 text-xs text-[var(--color-text-muted)] text-center">
-                    {availableRepos.length === 0 ? 'Loading repositories...' : 'All repos are linked'}
-                  </div>
-                ) : (
-                  unlinkedRepos
-                    .filter((r) => !repoSearch || r.fullName.toLowerCase().includes(repoSearch.toLowerCase()))
-                    .slice(0, 8)
-                    .map((r) => (
-                      <button
-                        key={r.fullName}
-                        type="button"
-                        onClick={() => {
-                          setSelectedRepoToAdd(r.fullName);
-                          setRepoSearch(r.fullName);
-                          setRepoDropdownOpen(false);
-                          const [owner, repo] = r.fullName.split('/');
-                          const isFirstRepo = githubRepos.length === 0;
-                          updateRepos.mutate([...githubRepos, { owner, repo }], {
-                            onSuccess: () => {
-                              setRepoSearch('');
-                              setSelectedRepoToAdd('');
-                              toast.success(`Added ${r.fullName}`);
-                              if (isFirstRepo) setTimeout(() => handleSync(), 500);
-                            },
-                          });
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-subtle"
-                      >
-                        <GitBranch size={14} className="shrink-0 text-secondary" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            {r.private && <Lock size={10} className="text-[var(--color-text-muted)]" />}
-                            <span className="font-mono text-xs text-primary">{r.fullName}</span>
-                          </div>
-                          {r.description && (
-                            <p className="text-xs text-[var(--color-text-muted)] truncate mt-0.5">{r.description}</p>
-                          )}
-                        </div>
-                      </button>
-                    ))
-                )}
-                {unlinkedRepos.filter((r) => !repoSearch || r.fullName.toLowerCase().includes(repoSearch.toLowerCase())).length === 0 && unlinkedRepos.length > 0 && (
-                  <div className="px-3 py-3 text-xs text-[var(--color-text-muted)] text-center">
-                    No repos matching "{repoSearch}"
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
       </div>
 
-      {/* README Overview */}
-      {readme && githubRepos.length > 0 && (
-        <div className="mb-6 rounded-lg border border-subtle bg-surface p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <BookOpen size={16} className="text-secondary" />
-            <h3 className="text-sm font-semibold text-primary">Repository Overview</h3>
-            {githubRepos.length > 1 && (
-              <Select
-                value={`${readmeRepo?.owner}/${readmeRepo?.repo}`}
-                onValueChange={(v) => {
-                  if (!v) return;
-                  const [o, r] = v.split('/');
-                  setReadmeRepo({ owner: o, repo: r });
-                }}
-              >
-                <SelectTrigger className="h-7 w-auto text-xs font-mono">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {githubRepos.map((r) => (
-                    <SelectItem key={`${r.owner}/${r.repo}`} value={`${r.owner}/${r.repo}`}>
-                      {r.owner}/{r.repo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+      {/* Recent PRs */}
+      <div className="rounded-lg border border-subtle bg-surface">
+        <div className="flex items-center justify-between border-b border-subtle px-4 py-3">
+          <div className="flex items-center gap-2">
+            <GitPullRequest size={16} className="text-secondary" />
+            <h3 className="text-sm font-semibold text-primary">Pull Requests</h3>
           </div>
-          <div className="prose prose-sm max-w-none text-secondary">
-            <pre className="whitespace-pre-wrap text-xs leading-relaxed text-secondary font-sans bg-transparent border-0 p-0">
-              {readme}
-            </pre>
+          <span className="text-xs text-[var(--color-text-muted)]">{allPRs.length} total</span>
+        </div>
+        {allPRs.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-secondary">No pull requests synced yet.</div>
+        ) : (
+          <div className="divide-y divide-subtle">
+            {allPRs.slice(0, 10).map((pr, i) => {
+              const isMerged = pr.state === 'merged';
+              const isOpen = pr.state === 'open';
+              return (
+                <div key={`${pr.repo}-${pr.number}-${i}`} className="flex items-start gap-3 px-4 py-2.5">
+                  {isMerged ? (
+                    <GitMerge size={14} weight="bold" className="mt-0.5 shrink-0 text-accent" />
+                  ) : isOpen ? (
+                    <GitPullRequest size={14} weight="bold" className="mt-0.5 shrink-0 text-[var(--color-success)]" />
+                  ) : (
+                    <CheckCircle size={14} className="mt-0.5 shrink-0 text-[var(--color-error)]" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <a href={pr.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:text-accent transition-colors truncate">
+                        {pr.title}
+                      </a>
+                      <Badge className={
+                        isMerged ? 'bg-[var(--color-accent-muted)] text-[var(--color-accent-text)]'
+                          : isOpen ? 'bg-[var(--color-success-muted)] text-[var(--color-success)]'
+                            : 'bg-[var(--color-error-muted)] text-[var(--color-error)]'
+                      }>
+                        {pr.state}
+                      </Badge>
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                      <span>#{pr.number}</span>
+                      <span>{pr.author}</span>
+                      <span className="text-[var(--color-success)]">+{pr.additions}</span>
+                      <span className="text-[var(--color-error)]">-{pr.deletions}</span>
+                      <span>{formatDistanceToNow(new Date(pr.createdAt), { addSuffix: true })}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Sync History */}
+      {data.syncs.length > 1 && (
+        <div className="rounded-lg border border-subtle bg-surface">
+          <div className="flex items-center gap-2 border-b border-subtle px-4 py-3">
+            <ArrowClockwise size={16} className="text-secondary" />
+            <h3 className="text-sm font-semibold text-primary">Sync History</h3>
+          </div>
+          <div className="divide-y divide-subtle">
+            {data.syncs.slice(0, 5).map((sync) => (
+              <div key={sync.id} className="flex items-center justify-between px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={14} weight="fill" className="text-[var(--color-success)]" />
+                  <span className="text-sm text-primary">
+                    {sync.commits.length} commit{sync.commits.length !== 1 ? 's' : ''}
+                    {sync.pullRequests.length > 0 && `, ${sync.pullRequests.length} PR${sync.pullRequests.length !== 1 ? 's' : ''}`}
+                  </span>
+                </div>
+                <span className="text-xs text-[var(--color-text-muted)]">
+                  {formatDistanceToNow(new Date(sync.createdAt), { addSuffix: true })}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Data tabs */}
-      {data.repoCount > 0 && (
+function RepoSearchInput({
+  repos,
+  search,
+  onSearchChange,
+  open,
+  onOpenChange,
+  onSelect,
+}: {
+  repos: Array<{ fullName: string; private: boolean; description: string | null }>;
+  search: string;
+  onSearchChange: (v: string) => void;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSelect: (fullName: string) => void;
+}) {
+  const filtered = repos
+    .filter((r) => !search || r.fullName.toLowerCase().includes(search.toLowerCase()))
+    .slice(0, 8);
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <MagnifyingGlass size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+        <input
+          type="text"
+          placeholder="Search your repositories..."
+          value={search}
+          onChange={(e) => { onSearchChange(e.target.value); onOpenChange(true); }}
+          onFocus={() => onOpenChange(true)}
+          className="h-9 w-full rounded-md border border-[var(--color-border-default)] bg-surface pl-9 pr-3 text-sm text-primary placeholder:text-[var(--color-text-muted)] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+        />
+      </div>
+      {open && (
         <>
-          <Tabs value={activeTab} onValueChange={(v) => v && setActiveTab(v)}>
-            <TabsList variant="line">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="commits">Commits ({allCommits.length})</TabsTrigger>
-              <TabsTrigger value="prs">Pull Requests ({allPRs.length})</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="mt-4">
-            {activeTab === 'overview' && <OverviewTab syncs={data.syncs} summaries={summaries} />}
-            {activeTab === 'commits' && <CommitsTab commits={allCommits} />}
-            {activeTab === 'prs' && <PRsTab prs={allPRs} />}
+          <div className="fixed inset-0 z-40" onClick={() => onOpenChange(false)} />
+          <div className="absolute left-0 right-0 top-10 z-50 max-h-64 overflow-y-auto rounded-lg border border-subtle bg-surface shadow-md">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-4 text-xs text-[var(--color-text-muted)] text-center">
+                {repos.length === 0 ? 'Loading repositories...' : `No repos matching "${search}"`}
+              </div>
+            ) : (
+              filtered.map((r) => (
+                <button
+                  key={r.fullName}
+                  type="button"
+                  onClick={() => onSelect(r.fullName)}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-subtle"
+                >
+                  <GitBranch size={16} className="shrink-0 text-secondary" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      {r.private && <Lock size={11} className="text-[var(--color-text-muted)]" />}
+                      <span className="text-sm font-medium text-primary">{r.fullName}</span>
+                    </div>
+                    {r.description && (
+                      <p className="text-xs text-[var(--color-text-muted)] truncate mt-0.5">{r.description}</p>
+                    )}
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function OverviewTab({ syncs, summaries }: { syncs: SyncRecord[]; summaries: SyncRecord[] }) {
-  if (syncs.length === 0) {
-    return (
-      <div className="rounded-lg border border-subtle bg-surface py-12 text-center">
-        <Clock size={32} className="mx-auto mb-2 text-[var(--color-text-muted)]" />
-        <p className="text-sm text-secondary">No syncs yet. Click "Sync Now" to pull data from GitHub.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {summaries.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">AI Summaries</h3>
-          {summaries.slice(0, 5).map((sync) => (
-            <div key={sync.id} className="rounded-lg border border-subtle bg-surface p-4">
-              <div className="flex items-start gap-3">
-                <Sparkle size={18} weight="fill" className="mt-0.5 shrink-0 text-accent" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-primary leading-relaxed">{sync.summary}</p>
-                  <div className="mt-2 flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
-                    <span>{sync.commits.length} commits</span>
-                    <span>{sync.pullRequests.length} PRs</span>
-                    <span>{formatDistanceToNow(new Date(sync.createdAt), { addSuffix: true })}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="space-y-3">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Sync History</h3>
-        {syncs.map((sync) => (
-          <div key={sync.id} className="flex items-center justify-between rounded-lg border border-subtle bg-surface px-4 py-3">
-            <div className="flex items-center gap-3">
-              <CheckCircle size={16} weight="fill" className="text-[var(--color-success)]" />
-              <div>
-                <p className="text-sm font-medium text-primary">
-                  {sync.commits.length} commit{sync.commits.length !== 1 ? 's' : ''}
-                  {sync.pullRequests.length > 0 && `, ${sync.pullRequests.length} PR${sync.pullRequests.length !== 1 ? 's' : ''}`}
-                </p>
-                {sync.summary && <p className="mt-0.5 text-xs text-secondary line-clamp-1">{sync.summary}</p>}
-              </div>
-            </div>
-            <span className="text-xs text-[var(--color-text-muted)] shrink-0">
-              {formatDistanceToNow(new Date(sync.createdAt), { addSuffix: true })}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CommitsTab({ commits }: { commits: GitHubCommit[] }) {
-  if (commits.length === 0) {
-    return (
-      <div className="rounded-lg border border-subtle bg-surface py-12 text-center">
-        <GitCommit size={32} className="mx-auto mb-2 text-[var(--color-text-muted)]" />
-        <p className="text-sm text-secondary">No commits synced yet.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg border border-subtle bg-surface divide-y divide-subtle">
-      {commits.slice(0, 50).map((commit, i) => (
-        <div key={`${commit.sha}-${i}`} className="flex items-start gap-3 px-4 py-3">
-          <GitCommit size={16} className="mt-0.5 shrink-0 text-[var(--color-text-muted)]" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-primary truncate">{commit.message.split('\n')[0]}</p>
-            <div className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
-              <span>{commit.author}</span>
-              <span className="font-mono">{commit.sha.slice(0, 7)}</span>
-              <span>{commit.repo}</span>
-              <span>{formatDistanceToNow(new Date(commit.date), { addSuffix: true })}</span>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function PRsTab({ prs }: { prs: GitHubPR[] }) {
-  if (prs.length === 0) {
-    return (
-      <div className="rounded-lg border border-subtle bg-surface py-12 text-center">
-        <GitPullRequest size={32} className="mx-auto mb-2 text-[var(--color-text-muted)]" />
-        <p className="text-sm text-secondary">No pull requests synced yet.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg border border-subtle bg-surface divide-y divide-subtle">
-      {prs.map((pr, i) => {
-        const config = PR_STATE_CONFIG[pr.state];
-        return (
-          <div key={`${pr.repo}-${pr.number}-${i}`} className="flex items-start gap-3 px-4 py-3">
-            <span className="mt-0.5 shrink-0">{config.icon}</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <a
-                  href={pr.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-primary hover:text-accent transition-colors truncate"
-                >
-                  {pr.title}
-                </a>
-                <Badge className={config.style}>{pr.state}</Badge>
-              </div>
-              <div className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
-                <span>#{pr.number}</span>
-                <span>{pr.author}</span>
-                <span>{pr.repo}</span>
-                <span className="text-[var(--color-success)]">+{pr.additions}</span>
-                <span className="text-[var(--color-error)]">-{pr.deletions}</span>
-                <span>{formatDistanceToNow(new Date(pr.createdAt), { addSuffix: true })}</span>
-              </div>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
