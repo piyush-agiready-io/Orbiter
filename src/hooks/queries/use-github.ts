@@ -38,6 +38,7 @@ interface GitHubData {
   lastSyncAt: string | null;
   repoCount: number;
   githubConnected: boolean;
+  githubUsername: string | null;
 }
 
 export function useGitHubData(projectId: string) {
@@ -53,6 +54,37 @@ export function useTriggerSync(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => api.post(`/projects/${projectId}/github`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['github', projectId] });
+    },
+  });
+}
+
+export function useConnectGitHub(projectId: string) {
+  return useMutation({
+    mutationFn: () =>
+      api.post<{ authUrl: string }>(`/projects/${projectId}/github/connect`),
+  });
+}
+
+export function useDisconnectGitHub(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post(`/projects/${projectId}/github/disconnect`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['github', projectId] });
+    },
+  });
+}
+
+export function useCopyGitHubConnection(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (fromProjectId: string) =>
+      api.post<{ copied: boolean; username: string }>(
+        `/projects/${projectId}/github/copy-connection`,
+        { fromProjectId },
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['github', projectId] });
     },

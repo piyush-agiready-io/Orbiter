@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { useState, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { formatDistanceToNow } from 'date-fns';
 import {
   ArrowClockwise,
   GitBranch,
@@ -12,17 +13,34 @@ import {
   Clock,
   Sparkle,
   CircleNotch,
-  Warning,
+  Trash,
+  LinkSimple,
+  SignOut,
+  GithubLogo,
 } from '@phosphor-icons/react';
-import { useGitHubData, useTriggerSync } from '@/hooks/queries/use-github';
+import {
+  useGitHubData,
+  useTriggerSync,
+  useConnectGitHub,
+  useDisconnectGitHub,
+} from '@/hooks/queries/use-github';
 import type { SyncRecord, GitHubCommit, GitHubPR } from '@/hooks/queries/use-github';
+import { useProject } from '@/hooks/queries/use-projects';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/shared/lib/api-client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
 interface GitHubDashboardProps {
   projectId: string;
+}
+
+interface GitHubRepo {
+  owner: string;
+  repo: string;
 }
 
 const PR_STATE_CONFIG: Record<string, { icon: React.ReactNode; style: string }> = {
@@ -42,23 +60,86 @@ const PR_STATE_CONFIG: Record<string, { icon: React.ReactNode; style: string }> 
 
 export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   const { data, isLoading } = useGitHubData(projectId);
+  const { data: projectData } = useProject(projectId);
   const triggerSync = useTriggerSync(projectId);
+  const connectGitHub = useConnectGitHub(projectId);
+  const disconnectGitHub = useDisconnectGitHub(projectId);
+  const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('overview');
+  const [repoInput, setRepoInput] = useState('');
+
+  const project = projectData as { githubRepos?: GitHubRepo[] } | undefined;
+  const githubRepos = project?.githubRepos ?? [];
+
+  const updateRepos = useMutation({
+    mutationFn: (repos: GitHubRepo[]) =>
+      api.patch(`/projects/${projectId}`, { githubRepos: repos }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['github', projectId] });
+    },
+  });
+
+  const justConnected = searchParams.get('connected') === 'true';
+
+  const handleConnect = () => {
+    connectGitHub.mutate(undefined, {
+      onSuccess: (result) => {
+        const url = (result as { authUrl: string }).authUrl;
+        window.location.href = url;
+      },
+      onError: () => toast.error('Failed to start GitHub connection'),
+    });
+  };
+
+  const handleDisconnect = () => {
+    if (!confirm('Disconnect GitHub? This will remove all linked repos.')) return;
+    disconnectGitHub.mutate(undefined, {
+      onSuccess: () => toast.success('GitHub disconnected'),
+    });
+  };
 
   const handleSync = () => {
     triggerSync.mutate(undefined, {
       onSuccess: () => toast.success('GitHub sync complete'),
-      onError: () => toast.error('Sync failed — check GitHub connection'),
+      onError: () => toast.error('Sync failed — check connection'),
     });
+  };
+
+  const handleAddRepo = (e: FormEvent) => {
+    e.preventDefault();
+    const trimmed = repoInput.trim();
+    if (!trimmed) return;
+
+    const parts = trimmed.replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').split('/');
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+      toast.error('Enter a valid owner/repo (e.g. acme/my-app)');
+      return;
+    }
+
+    const [owner, repo] = parts;
+    if (githubRepos.some((r) => r.owner === owner && r.repo === repo)) {
+      toast.error('This repository is already added');
+      return;
+    }
+
+    updateRepos.mutate([...githubRepos, { owner, repo }], {
+      onSuccess: () => { setRepoInput(''); toast.success(`Added ${owner}/${repo}`); },
+    });
+  };
+
+  const handleRemoveRepo = (target: GitHubRepo) => {
+    updateRepos.mutate(
+      githubRepos.filter((r) => !(r.owner === target.owner && r.repo === target.repo)),
+      { onSuccess: () => toast.success(`Removed ${target.owner}/${target.repo}`) },
+    );
   };
 
   if (isLoading) {
     return (
       <div className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="h-6 w-48 animate-pulse rounded bg-subtle" />
-          <div className="h-8 w-28 animate-pulse rounded bg-subtle" />
-        </div>
+        <div className="h-6 w-48 animate-pulse rounded bg-subtle" />
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-24 animate-pulse rounded-lg border border-subtle bg-surface" />
         ))}
@@ -66,77 +147,127 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
     );
   }
 
+  // State 1: Not connected
   if (!data?.githubConnected) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-6">
-        <GitBranch size={40} className="text-[var(--color-text-muted)] mb-4" />
-        <h2 className="text-base font-semibold text-primary">GitHub not connected</h2>
+        <GithubLogo size={48} weight="fill" className="text-[var(--color-text-muted)] mb-4" />
+        <h2 className="text-base font-semibold text-primary">Connect GitHub</h2>
         <p className="mt-1 text-sm text-secondary max-w-sm text-center">
-          The project owner needs to connect their GitHub account in Settings to enable repository syncing.
+          Connect a GitHub account to this project to sync commits, pull requests, and get AI-powered summaries.
         </p>
-        <Button className="mt-4" onClick={() => window.location.href = '/settings'}>
-          Go to Settings
+        <Button
+          className="mt-4"
+          onClick={handleConnect}
+          disabled={connectGitHub.isPending}
+        >
+          <GithubLogo size={16} weight="bold" className="mr-1.5" />
+          {connectGitHub.isPending ? 'Connecting...' : 'Connect GitHub'}
         </Button>
-      </div>
-    );
-  }
-
-  if (data.repoCount === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 px-6">
-        <GitBranch size={40} className="text-[var(--color-text-muted)] mb-4" />
-        <h2 className="text-base font-semibold text-primary">No repositories linked</h2>
-        <p className="mt-1 text-sm text-secondary max-w-sm text-center">
-          Add GitHub repositories in Project Settings to start syncing commits and pull requests.
-        </p>
       </div>
     );
   }
 
   const allCommits = data.syncs.flatMap((s) => s.commits);
   const allPRs = data.syncs.flatMap((s) => s.pullRequests);
-  const latestSummaries = data.syncs.filter((s) => s.summary);
+  const summaries = data.syncs.filter((s) => s.summary);
 
   return (
     <div className="p-6">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-h2 font-semibold text-primary">GitHub</h2>
           <p className="mt-0.5 text-sm text-secondary">
-            {data.repoCount} repo{data.repoCount !== 1 ? 's' : ''} linked
+            Connected as <strong>{data.githubUsername}</strong>
+            {' — '}{data.repoCount} repo{data.repoCount !== 1 ? 's' : ''} linked
             {data.lastSyncAt && (
-              <> — last synced {formatDistanceToNow(new Date(data.lastSyncAt), { addSuffix: true })}</>
+              <> — synced {formatDistanceToNow(new Date(data.lastSyncAt), { addSuffix: true })}</>
             )}
           </p>
         </div>
-        <Button
-          size="sm"
-          onClick={handleSync}
-          disabled={triggerSync.isPending}
-        >
-          {triggerSync.isPending ? (
-            <><CircleNotch size={14} className="mr-1.5 animate-spin" /> Syncing...</>
-          ) : (
-            <><ArrowClockwise size={14} className="mr-1.5" /> Sync Now</>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={handleDisconnect}>
+            <SignOut size={14} className="mr-1" /> Disconnect
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSync}
+            disabled={triggerSync.isPending || data.repoCount === 0}
+          >
+            {triggerSync.isPending ? (
+              <><CircleNotch size={14} className="mr-1.5 animate-spin" /> Syncing...</>
+            ) : (
+              <><ArrowClockwise size={14} className="mr-1.5" /> Sync Now</>
+            )}
+          </Button>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => v && setActiveTab(v)}>
-        <TabsList variant="line">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="commits">Commits ({allCommits.length})</TabsTrigger>
-          <TabsTrigger value="prs">Pull Requests ({allPRs.length})</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {justConnected && (
+        <div className="mb-4 flex items-center gap-2 rounded-md bg-[var(--color-success-muted)] px-3 py-2">
+          <CheckCircle size={16} weight="fill" className="text-[var(--color-success)]" />
+          <p className="text-sm text-[var(--color-success)]">GitHub connected successfully. Add repos below to start syncing.</p>
+        </div>
+      )}
 
-      <div className="mt-4">
-        {activeTab === 'overview' && (
-          <OverviewTab syncs={data.syncs} summaries={latestSummaries} />
+      {/* Repos Section */}
+      <div className="mb-6 rounded-lg border border-subtle bg-surface p-4">
+        <h3 className="text-sm font-semibold text-primary mb-3">Repositories</h3>
+        {githubRepos.length > 0 && (
+          <div className="space-y-1.5 mb-3">
+            {githubRepos.map((repo) => (
+              <div
+                key={`${repo.owner}/${repo.repo}`}
+                className="group flex items-center justify-between rounded-md border border-[var(--color-border-subtle)] px-3 py-2"
+              >
+                <div className="flex items-center gap-2 text-sm">
+                  <GitBranch size={14} className="text-secondary" />
+                  <span className="font-mono text-xs text-primary">{repo.owner}/{repo.repo}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="text-[var(--color-error)] opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => handleRemoveRepo(repo)}
+                >
+                  <Trash size={14} />
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
-        {activeTab === 'commits' && <CommitsTab commits={allCommits} />}
-        {activeTab === 'prs' && <PRsTab prs={allPRs} />}
+        <form onSubmit={handleAddRepo} className="flex items-center gap-2">
+          <Input
+            placeholder="owner/repo or GitHub URL"
+            value={repoInput}
+            onChange={(e) => setRepoInput(e.target.value)}
+            className="font-mono text-xs flex-1"
+          />
+          <Button type="submit" size="sm" variant="secondary" disabled={!repoInput.trim() || updateRepos.isPending}>
+            {updateRepos.isPending ? 'Adding...' : 'Add'}
+          </Button>
+        </form>
       </div>
+
+      {/* Data tabs */}
+      {data.repoCount > 0 && (
+        <>
+          <Tabs value={activeTab} onValueChange={(v) => v && setActiveTab(v)}>
+            <TabsList variant="line">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="commits">Commits ({allCommits.length})</TabsTrigger>
+              <TabsTrigger value="prs">Pull Requests ({allPRs.length})</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="mt-4">
+            {activeTab === 'overview' && <OverviewTab syncs={data.syncs} summaries={summaries} />}
+            {activeTab === 'commits' && <CommitsTab commits={allCommits} />}
+            {activeTab === 'prs' && <PRsTab prs={allPRs} />}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -155,14 +286,9 @@ function OverviewTab({ syncs, summaries }: { syncs: SyncRecord[]; summaries: Syn
     <div className="space-y-4">
       {summaries.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-            AI Summaries
-          </h3>
+          <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">AI Summaries</h3>
           {summaries.slice(0, 5).map((sync) => (
-            <div
-              key={sync.id}
-              className="rounded-lg border border-subtle bg-surface p-4"
-            >
+            <div key={sync.id} className="rounded-lg border border-subtle bg-surface p-4">
               <div className="flex items-start gap-3">
                 <Sparkle size={18} weight="fill" className="mt-0.5 shrink-0 text-accent" />
                 <div className="flex-1 min-w-0">
@@ -180,14 +306,9 @@ function OverviewTab({ syncs, summaries }: { syncs: SyncRecord[]; summaries: Syn
       )}
 
       <div className="space-y-3">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-          Sync History
-        </h3>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Sync History</h3>
         {syncs.map((sync) => (
-          <div
-            key={sync.id}
-            className="flex items-center justify-between rounded-lg border border-subtle bg-surface px-4 py-3"
-          >
+          <div key={sync.id} className="flex items-center justify-between rounded-lg border border-subtle bg-surface px-4 py-3">
             <div className="flex items-center gap-3">
               <CheckCircle size={16} weight="fill" className="text-[var(--color-success)]" />
               <div>
@@ -195,9 +316,7 @@ function OverviewTab({ syncs, summaries }: { syncs: SyncRecord[]; summaries: Syn
                   {sync.commits.length} commit{sync.commits.length !== 1 ? 's' : ''}
                   {sync.pullRequests.length > 0 && `, ${sync.pullRequests.length} PR${sync.pullRequests.length !== 1 ? 's' : ''}`}
                 </p>
-                {sync.summary && (
-                  <p className="mt-0.5 text-xs text-secondary line-clamp-1">{sync.summary}</p>
-                )}
+                {sync.summary && <p className="mt-0.5 text-xs text-secondary line-clamp-1">{sync.summary}</p>}
               </div>
             </div>
             <span className="text-xs text-[var(--color-text-muted)] shrink-0">
@@ -222,23 +341,20 @@ function CommitsTab({ commits }: { commits: GitHubCommit[] }) {
 
   return (
     <div className="rounded-lg border border-subtle bg-surface divide-y divide-subtle">
-      {commits.slice(0, 50).map((commit, i) => {
-        const firstLine = commit.message.split('\n')[0];
-        return (
-          <div key={`${commit.sha}-${i}`} className="flex items-start gap-3 px-4 py-3">
-            <GitCommit size={16} className="mt-0.5 shrink-0 text-[var(--color-text-muted)]" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-primary truncate">{firstLine}</p>
-              <div className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
-                <span>{commit.author}</span>
-                <span className="font-mono">{commit.sha.slice(0, 7)}</span>
-                <span>{commit.repo}</span>
-                <span>{formatDistanceToNow(new Date(commit.date), { addSuffix: true })}</span>
-              </div>
+      {commits.slice(0, 50).map((commit, i) => (
+        <div key={`${commit.sha}-${i}`} className="flex items-start gap-3 px-4 py-3">
+          <GitCommit size={16} className="mt-0.5 shrink-0 text-[var(--color-text-muted)]" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-primary truncate">{commit.message.split('\n')[0]}</p>
+            <div className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
+              <span>{commit.author}</span>
+              <span className="font-mono">{commit.sha.slice(0, 7)}</span>
+              <span>{commit.repo}</span>
+              <span>{formatDistanceToNow(new Date(commit.date), { addSuffix: true })}</span>
             </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }

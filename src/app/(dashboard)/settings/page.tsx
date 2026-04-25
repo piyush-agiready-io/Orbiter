@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useForm } from 'react-hook-form';
@@ -22,37 +22,6 @@ export default function SettingsPage() {
   const { user, setAuth, accessToken, clearAuth } = useAuth();
   const router = useRouter();
   const [saved, setSaved] = useState(false);
-  const [githubConnected, setGithubConnected] = useState(false);
-  const [githubUsername, setGithubUsername] = useState<string | null>(null);
-  const [githubLoading, setGithubLoading] = useState(true);
-
-  const fetchGithubStatus = useCallback(async () => {
-    try {
-      const status = await api.get<{ connected: boolean; username: string | null }>(
-        '/auth/github/status',
-      );
-      setGithubConnected(status.connected);
-      setGithubUsername(status.username);
-    } catch {
-      // Silently fail — user just sees disconnected state
-    } finally {
-      setGithubLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchGithubStatus();
-  }, [fetchGithubStatus]);
-
-  async function disconnectGithub() {
-    try {
-      await api.post('/auth/github/disconnect');
-      setGithubConnected(false);
-      setGithubUsername(null);
-    } catch {
-      // Silently fail
-    }
-  }
 
   const {
     register,
@@ -125,34 +94,6 @@ export default function SettingsPage() {
             {saved && <span className="text-sm text-success">Saved!</span>}
           </div>
         </form>
-      </div>
-
-      <div className="mt-6 rounded-lg border border-subtle bg-surface p-6">
-        <h3 className="text-lg font-medium text-primary">GitHub Connection</h3>
-        <p className="mt-1 text-sm text-secondary">
-          Connect your GitHub account to enable commit syncing and automatic task status updates.
-        </p>
-        <div className="mt-4">
-          {githubLoading ? (
-            <div className="h-8 w-40 animate-pulse rounded-md bg-subtle" />
-          ) : githubConnected ? (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-success" />
-                <span className="text-sm text-primary">
-                  Connected as <strong>{githubUsername}</strong>
-                </span>
-              </div>
-              <Button variant="destructive" size="sm" onClick={disconnectGithub}>
-                Disconnect
-              </Button>
-            </div>
-          ) : (
-            <Button onClick={() => (window.location.href = '/api/v1/auth/github')}>
-              Connect GitHub
-            </Button>
-          )}
-        </div>
       </div>
 
       <div className="mt-6 rounded-lg border border-[var(--color-error)]/20 bg-surface p-6">

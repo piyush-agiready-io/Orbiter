@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { GitBranch, Trash, UserPlus } from '@phosphor-icons/react';
+import { Trash, UserPlus } from '@phosphor-icons/react';
 import { useProject } from '@/hooks/queries/use-projects';
 import { useUsers } from '@/hooks/queries/use-users';
 import { useAuth } from '@/hooks/use-auth';
@@ -38,11 +38,6 @@ const updateSchema = z.object({
 
 type FormValues = z.infer<typeof updateSchema>;
 
-interface GitHubRepo {
-  owner: string;
-  repo: string;
-}
-
 interface PopulatedUser {
   id?: string;
   _id?: string;
@@ -54,7 +49,6 @@ interface PopulatedUser {
 interface ProjectData {
   name?: string;
   description?: string;
-  githubRepos?: GitHubRepo[];
   owner?: PopulatedUser;
   members?: PopulatedUser[];
   clients?: PopulatedUser[];
@@ -66,13 +60,11 @@ export default function ProjectSettingsPage() {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
-  const [repoInput, setRepoInput] = useState('');
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [memberRole, setMemberRole] = useState<string>('member');
 
   const project = data as ProjectData | undefined;
-  const githubRepos = project?.githubRepos ?? [];
   const isAdmin = currentUser?.role === 'admin';
 
   const { data: usersData } = useUsers();
@@ -124,14 +116,6 @@ export default function ProjectSettingsPage() {
     },
   });
 
-  const updateGithubRepos = useMutation({
-    mutationFn: (repos: GitHubRepo[]) =>
-      api.patch(`/projects/${params.id}`, { githubRepos: repos }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', params.id] });
-    },
-  });
-
   const form = useForm<FormValues>({
     resolver: zodResolver(updateSchema),
     defaultValues: {
@@ -145,43 +129,6 @@ export default function ProjectSettingsPage() {
 
   const onSubmit = (values: FormValues) => {
     updateProject.mutate(values);
-  };
-
-  const handleAddRepo = (e: FormEvent) => {
-    e.preventDefault();
-    const trimmed = repoInput.trim();
-    if (!trimmed) return;
-
-    const parts = trimmed.replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').split('/');
-    if (parts.length !== 2 || !parts[0] || !parts[1]) {
-      toast.error('Enter a valid owner/repo (e.g. acme/my-app)');
-      return;
-    }
-
-    const [owner, repo] = parts;
-    const alreadyExists = githubRepos.some(
-      (r) => r.owner === owner && r.repo === repo,
-    );
-    if (alreadyExists) {
-      toast.error('This repository is already connected');
-      return;
-    }
-
-    updateGithubRepos.mutate([...githubRepos, { owner, repo }], {
-      onSuccess: () => {
-        setRepoInput('');
-        toast.success(`Added ${owner}/${repo}`);
-      },
-    });
-  };
-
-  const handleRemoveRepo = (target: GitHubRepo) => {
-    const next = githubRepos.filter(
-      (r) => !(r.owner === target.owner && r.repo === target.repo),
-    );
-    updateGithubRepos.mutate(next, {
-      onSuccess: () => toast.success(`Removed ${target.owner}/${target.repo}`),
-    });
   };
 
   return (
@@ -214,58 +161,6 @@ export default function ProjectSettingsPage() {
             </Button>
             {saved && <span className="text-sm text-success">Saved!</span>}
           </div>
-        </form>
-      </div>
-
-      {/* GitHub Repositories */}
-      <div className="mt-6 rounded-lg border border-subtle bg-surface p-6">
-        <h3 className="text-sm font-semibold text-primary">GitHub Repositories</h3>
-        <p className="mt-1 text-sm text-secondary">
-          Connected repos for commit syncing. The sync agent uses these to fetch commits and PRs.
-        </p>
-
-        {githubRepos.length > 0 && (
-          <div className="mt-4 space-y-2">
-            {githubRepos.map((repo) => (
-              <div
-                key={`${repo.owner}/${repo.repo}`}
-                className="flex items-center justify-between rounded-md border border-[var(--color-border-subtle)] px-3 py-2"
-              >
-                <div className="flex items-center gap-2 text-sm text-primary">
-                  <GitBranch size={16} className="shrink-0 text-secondary" />
-                  <span className="font-mono text-xs">{repo.owner}/{repo.repo}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-[var(--color-error)]"
-                  onClick={() => handleRemoveRepo(repo)}
-                  disabled={updateGithubRepos.isPending}
-                >
-                  <Trash size={14} />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <form onSubmit={handleAddRepo} className="mt-4 flex items-end gap-2">
-          <div className="flex-1 space-y-1.5">
-            <Label className="text-sm font-medium text-primary">Add Repository</Label>
-            <Input
-              placeholder="owner/repo (e.g. acme/my-app)"
-              value={repoInput}
-              onChange={(e) => setRepoInput(e.target.value)}
-              className="font-mono text-xs"
-            />
-          </div>
-          <Button
-            type="submit"
-            variant="secondary"
-            disabled={!repoInput.trim() || updateGithubRepos.isPending}
-          >
-            {updateGithubRepos.isPending ? 'Adding...' : 'Add'}
-          </Button>
         </form>
       </div>
 

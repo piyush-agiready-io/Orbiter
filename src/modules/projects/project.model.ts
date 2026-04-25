@@ -1,5 +1,10 @@
 import { Schema, model, models, type Document } from 'mongoose';
 
+export interface GitHubOAuth {
+  accessToken: string;
+  username: string;
+}
+
 export interface ProjectDocument extends Document {
   name: string;
   description?: string;
@@ -9,6 +14,7 @@ export interface ProjectDocument extends Document {
   members: Schema.Types.ObjectId[];
   clients: Schema.Types.ObjectId[];
   githubRepos: { owner: string; repo: string; installationId?: string }[];
+  githubOAuth?: GitHubOAuth;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +71,13 @@ const projectSchema = new Schema<ProjectDocument>(
       type: [githubRepoSchema],
       default: [],
     },
+    githubOAuth: {
+      type: {
+        accessToken: { type: String, required: true },
+        username: { type: String, required: true },
+      },
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -73,6 +86,7 @@ const projectSchema = new Schema<ProjectDocument>(
         ret.id = String(ret._id);
         delete ret._id;
         delete ret.__v;
+        delete ret.githubOAuth;
         return ret;
       },
     },
