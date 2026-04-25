@@ -11,7 +11,7 @@ export const GET = apiHandler({
     const result = await UserService.list(query);
     return {
       data: {
-        users: result.users.map((u) => u.toJSON()),
+        users: result.users,
         page: result.page,
         limit: result.limit,
         total: result.total,

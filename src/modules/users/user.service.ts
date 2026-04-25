@@ -32,11 +32,24 @@ export const UserService = {
     }
 
     const [users, total] = await Promise.all([
-      User.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }),
+      User.find(filter)
+        .select('+inviteExpiresAt')
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }),
       User.countDocuments(filter),
     ]);
 
-    return { users, page, limit, total };
+    const enriched = users.map((u) => {
+      const json = u.toJSON();
+      let inviteStatus: 'active' | 'pending' | 'expired' = 'active';
+      if (!u.lastLoginAt) {
+        inviteStatus = u.inviteExpiresAt && u.inviteExpiresAt < new Date() ? 'expired' : 'pending';
+      }
+      return { ...json, inviteStatus };
+    });
+
+    return { users: enriched, page, limit, total };
   },
 
   async invite(data: InviteUserInput) {
@@ -62,6 +75,24 @@ export const UserService = {
     await sendInviteEmail(data.email, inviteUrl, data.role);
 
     return { user: user.toJSON(), inviteToken: rawToken };
+  },
+
+  async resendInvite(userId: string) {
+    const user = await User.findById(userId).select('+inviteToken +inviteExpiresAt');
+    if (!user) throw new NotFoundError('User');
+    if (user.lastLoginAt) throw new ConflictError('User has already registered');
+
+    const rawToken = nanoid(48);
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    user.inviteToken = hashedToken;
+    user.inviteExpiresAt = new Date(Date.now() + TOKEN_EXPIRY.INVITE);
+    await user.save();
+
+    const inviteUrl = `${env.NEXT_PUBLIC_APP_URL}/register/${rawToken}`;
+    await sendInviteEmail(user.email, inviteUrl, user.role);
+
+    return { inviteToken: rawToken };
   },
 
   async getById(id: string) {

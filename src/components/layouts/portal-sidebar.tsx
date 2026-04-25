@@ -1,22 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { GearSix } from '@phosphor-icons/react';
+import { usePathname, useRouter } from 'next/navigation';
+import { SignOut } from '@phosphor-icons/react';
 import { usePortalProjects } from '@/hooks/queries/use-portal-data';
+import { useAuth } from '@/hooks/use-auth';
 
 const PROJECT_DOT_COLORS = ['bg-accent', 'bg-success', 'bg-warning', 'bg-info'];
 
 export function PortalSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data } = usePortalProjects();
+  const { user, clearAuth } = useAuth();
 
   const projects = (data as { data?: { id: string; name: string }[] })?.data ??
     (Array.isArray(data) ? (data as { id: string; name: string }[]) : []);
 
+  function handleLogout() {
+    clearAuth();
+    router.push('/login');
+  }
+
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-subtle bg-surface p-4">
-      {/* Logo + Client badge */}
       <div className="flex items-center gap-2 px-3 py-1.5">
         <div className="flex h-4 w-4 items-center justify-center rounded-sm bg-accent text-[10px] font-bold leading-none text-[var(--color-text-inverse)]">
           O
@@ -27,7 +34,6 @@ export function PortalSidebar() {
         </span>
       </div>
 
-      {/* Projects section */}
       <div className="mt-6 mb-2 px-3">
         <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
           Projects
@@ -55,17 +61,22 @@ export function PortalSidebar() {
         })}
       </nav>
 
-      {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Settings */}
-      <Link
-        href="/settings"
-        className="flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm text-secondary transition-colors duration-[120ms] ease-[ease] hover:bg-subtle hover:text-primary"
+      {user && (
+        <div className="border-t border-subtle pt-3 mt-3">
+          <p className="px-3 text-sm font-medium text-primary truncate">{user.name}</p>
+          <p className="px-3 text-xs text-[var(--color-text-muted)] truncate">{user.email}</p>
+        </div>
+      )}
+
+      <button
+        onClick={handleLogout}
+        className="mt-2 flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm text-[var(--color-error)] transition-colors duration-[120ms] ease-[ease] hover:bg-subtle"
       >
-        <GearSix size={16} className="shrink-0" />
-        <span>Settings</span>
-      </Link>
+        <SignOut size={16} className="shrink-0" />
+        <span>Sign Out</span>
+      </button>
     </aside>
   );
 }

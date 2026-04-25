@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useUsers, useInviteUser } from '@/hooks/queries/use-users';
+import { useUsers, useInviteUser, useDeactivateUser, useResendInvite } from '@/hooks/queries/use-users';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +21,17 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import Avatar from 'boring-avatars';
-import { Copy, CheckCircle, UserPlus, EnvelopeSimple } from '@phosphor-icons/react';
+import {
+  Copy,
+  CheckCircle,
+  UserPlus,
+  EnvelopeSimple,
+  Trash,
+  ArrowClockwise,
+  Clock,
+  Warning,
+} from '@phosphor-icons/react';
+import { toast } from 'sonner';
 
 const ROLE_STYLES: Record<string, string> = {
   admin: 'bg-[var(--color-error-muted)] text-[var(--color-error)]',
@@ -29,10 +39,38 @@ const ROLE_STYLES: Record<string, string> = {
   client: 'bg-[var(--color-info-muted)] text-[var(--color-info)]',
 };
 
+const INVITE_STATUS_CONFIG: Record<string, { label: string; style: string; icon: React.ReactNode }> = {
+  active: {
+    label: 'Active',
+    style: 'bg-[var(--color-success-muted)] text-[var(--color-success)]',
+    icon: <CheckCircle size={12} weight="fill" />,
+  },
+  pending: {
+    label: 'Pending',
+    style: 'bg-[var(--color-warning-muted)] text-[var(--color-warning)]',
+    icon: <Clock size={12} />,
+  },
+  expired: {
+    label: 'Expired',
+    style: 'bg-[var(--color-error-muted)] text-[var(--color-error)]',
+    icon: <Warning size={12} />,
+  },
+};
+
+interface UserItem {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  inviteStatus: 'active' | 'pending' | 'expired';
+}
+
 export default function AdminPage() {
   const { user } = useAuth();
   const { data, isLoading } = useUsers();
   const inviteUser = useInviteUser();
+  const deactivateUser = useDeactivateUser();
+  const resendInvite = useResendInvite();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [email, setEmail] = useState('');
@@ -49,7 +87,7 @@ export default function AdminPage() {
     );
   }
 
-  const users = (data as { users?: { id: string; name: string; email: string; role: string }[] } | undefined)?.users ?? [];
+  const users: UserItem[] = (data as { users?: UserItem[] } | undefined)?.users ?? [];
 
   const handleInvite = async () => {
     if (!email) return;
@@ -75,12 +113,25 @@ export default function AdminPage() {
     setCopied(false);
   };
 
+  const handleResend = (u: UserItem) => {
+    resendInvite.mutate(u.id, {
+      onSuccess: () => toast.success(`Invite resent to ${u.email}`),
+      onError: () => toast.error('Failed to resend invite'),
+    });
+  };
+
+  const activeUsers = users.filter((u) => u.inviteStatus === 'active');
+  const pendingUsers = users.filter((u) => u.inviteStatus === 'pending');
+  const expiredUsers = users.filter((u) => u.inviteStatus === 'expired');
+
   return (
     <div className="mx-auto max-w-3xl p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-primary">Team Management</h1>
-          <p className="mt-1 text-sm text-secondary">Manage users and send invitations.</p>
+          <p className="mt-1 text-sm text-secondary">
+            {users.length} members — {activeUsers.length} active, {pendingUsers.length} pending
+          </p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
           <UserPlus size={16} className="mr-1.5" />
@@ -88,37 +139,84 @@ export default function AdminPage() {
         </Button>
       </div>
 
-      <div className="mt-6 rounded-lg border border-subtle bg-surface">
-        {isLoading ? (
-          <div className="space-y-3 p-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 animate-pulse rounded-md bg-subtle" />
-            ))}
-          </div>
-        ) : users.length === 0 ? (
-          <div className="py-12 text-center">
-            <p className="text-sm text-[var(--color-text-muted)]">No users found</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-subtle">
-            {users.map((u) => (
-              <div key={u.id} className="flex items-center gap-4 px-6 py-3">
-                <Avatar
-                  size={32}
-                  variant="beam"
-                  name={u.name}
-                  colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9']}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-primary truncate">{u.name}</p>
-                  <p className="text-xs text-[var(--color-text-muted)] truncate">{u.email}</p>
+      {isLoading ? (
+        <div className="mt-6 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-14 animate-pulse rounded-lg border border-subtle bg-surface" />
+          ))}
+        </div>
+      ) : users.length === 0 ? (
+        <div className="mt-6 rounded-lg border border-subtle bg-surface py-12 text-center">
+          <p className="text-sm text-[var(--color-text-muted)]">No team members yet. Invite your first user.</p>
+        </div>
+      ) : (
+        <div className="mt-6 space-y-4">
+          {[
+            { title: 'Active Members', items: activeUsers },
+            { title: 'Pending Invites', items: pendingUsers },
+            { title: 'Expired Invites', items: expiredUsers },
+          ]
+            .filter((section) => section.items.length > 0)
+            .map((section) => (
+              <div key={section.title}>
+                <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+                  {section.title} ({section.items.length})
+                </h3>
+                <div className="rounded-lg border border-subtle bg-surface divide-y divide-subtle">
+                  {section.items.map((u) => {
+                    const statusConfig = INVITE_STATUS_CONFIG[u.inviteStatus];
+                    return (
+                      <div key={u.id} className="group flex items-center gap-4 px-5 py-3">
+                        <Avatar
+                          size={32}
+                          variant="beam"
+                          name={u.name}
+                          colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9']}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-primary truncate">{u.name}</p>
+                          <p className="text-xs text-[var(--color-text-muted)] truncate">{u.email}</p>
+                        </div>
+                        <Badge className={statusConfig.style}>
+                          <span className="mr-1">{statusConfig.icon}</span>
+                          {statusConfig.label}
+                        </Badge>
+                        <Badge className={ROLE_STYLES[u.role] ?? ''}>{u.role}</Badge>
+                        <div className="flex items-center gap-1">
+                          {(u.inviteStatus === 'pending' || u.inviteStatus === 'expired') && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Resend invite"
+                              onClick={() => handleResend(u)}
+                              disabled={resendInvite.isPending}
+                            >
+                              <ArrowClockwise size={16} />
+                            </Button>
+                          )}
+                          {u.id !== user?.id && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              className="text-[var(--color-error)] opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => {
+                                if (confirm(`Remove ${u.name} from the team?`)) {
+                                  deactivateUser.mutate(u.id);
+                                }
+                              }}
+                            >
+                              <Trash size={16} />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <Badge className={ROLE_STYLES[u.role] ?? ''}>{u.role}</Badge>
               </div>
             ))}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={(v) => !v && handleCloseDialog()}>
         <DialogContent className="bg-surface border-[var(--color-border-subtle)] sm:max-w-md">
