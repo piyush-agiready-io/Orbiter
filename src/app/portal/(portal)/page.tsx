@@ -6,9 +6,8 @@ import { PortalProjectCard } from '@/components/features/portal/portal-project-c
 export default function PortalPage() {
   const { data, isLoading } = usePortalProjects();
 
-  const projects =
-    (data as { data?: { id: string; name: string; status?: string; progress?: number }[] })?.data ??
-    (Array.isArray(data) ? (data as { id: string; name: string; status?: string; progress?: number }[]) : []);
+  const raw = data as { projects?: { id: string; name: string; status?: string; progress?: number }[] } | undefined;
+  const projects = raw?.projects ?? [];
 
   return (
     <div className="p-6">

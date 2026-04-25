@@ -14,8 +14,8 @@ export function PortalSidebar() {
   const { data } = usePortalProjects();
   const { user, clearAuth } = useAuth();
 
-  const projects = (data as { data?: { id: string; name: string }[] })?.data ??
-    (Array.isArray(data) ? (data as { id: string; name: string }[]) : []);
+  const raw = data as { projects?: { id: string; name: string }[] } | undefined;
+  const projects = raw?.projects ?? [];
 
   function handleLogout() {
     clearAuth();

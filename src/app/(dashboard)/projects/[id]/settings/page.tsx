@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Trash, UserPlus } from '@phosphor-icons/react';
+import { Trash, UserPlus, Clock, CheckCircle } from '@phosphor-icons/react';
 import { useProject } from '@/hooks/queries/use-projects';
 import { useUsers } from '@/hooks/queries/use-users';
 import { useAuth } from '@/hooks/use-auth';
@@ -46,6 +46,14 @@ interface PopulatedUser {
   avatar?: string;
 }
 
+interface PlatformUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  inviteStatus?: string;
+}
+
 interface ProjectData {
   name?: string;
   description?: string;
@@ -53,6 +61,12 @@ interface ProjectData {
   members?: PopulatedUser[];
   clients?: PopulatedUser[];
 }
+
+const ROLE_BADGE: Record<string, string> = {
+  admin: 'bg-[var(--color-error-muted)] text-[var(--color-error)]',
+  internal: 'bg-[var(--color-accent-muted)] text-[var(--color-accent-text)]',
+  client: 'bg-[var(--color-info-muted)] text-[var(--color-info)]',
+};
 
 export default function ProjectSettingsPage() {
   const params = useParams<{ id: string }>();
@@ -62,13 +76,12 @@ export default function ProjectSettingsPage() {
   const [saved, setSaved] = useState(false);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [memberRole, setMemberRole] = useState<string>('member');
 
   const project = data as ProjectData | undefined;
   const isAdmin = currentUser?.role === 'admin';
 
   const { data: usersData } = useUsers();
-  const allUsers = (usersData as { users?: { id: string; name: string; email: string; role: string }[] } | undefined)?.users ?? [];
+  const allUsers: PlatformUser[] = (usersData as { users?: PlatformUser[] } | undefined)?.users ?? [];
 
   const ownerId = project?.owner?.id ?? project?.owner?._id;
   const memberIds = new Set([
@@ -77,33 +90,35 @@ export default function ProjectSettingsPage() {
     ownerId,
   ].filter(Boolean));
 
-  const availableUsers = allUsers.filter((u) => !memberIds.has(u.id));
+  const availableUsers = allUsers.filter(
+    (u) => !memberIds.has(u.id) && u.inviteStatus === 'active',
+  );
+
+  const selectedUser = allUsers.find((u) => u.id === selectedUserId);
+  const autoRole = selectedUser?.role === 'client' ? 'client' : 'member';
 
   const addMember = useMutation({
     mutationFn: (payload: { userId: string; role: string }) =>
       api.post(`/projects/${params.id}/members`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', params.id] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       setAddMemberOpen(false);
       setSelectedUserId('');
-      setMemberRole('member');
       toast.success('Member added');
     },
-    onError: () => {
-      toast.error('Failed to add member');
-    },
+    onError: () => toast.error('Failed to add member'),
   });
 
   const removeMember = useMutation({
-    mutationFn: (userId: string) =>
-      api.delete(`/projects/${params.id}/members`, { userId, role: 'member' }),
+    mutationFn: (payload: { userId: string; role: string }) =>
+      api.delete(`/projects/${params.id}/members`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', params.id] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast.success('Member removed');
     },
-    onError: () => {
-      toast.error('Failed to remove member');
-    },
+    onError: () => toast.error('Failed to remove member'),
   });
 
   const updateProject = useMutation({
@@ -118,26 +133,31 @@ export default function ProjectSettingsPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(updateSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-    },
+    defaultValues: { name: '', description: '' },
     values: project
       ? { name: project.name ?? '', description: project.description ?? '' }
       : undefined,
   });
 
-  const onSubmit = (values: FormValues) => {
-    updateProject.mutate(values);
-  };
+  const allMembers = [
+    ...(project?.members?.filter((m) => (m.id ?? m._id) !== ownerId) ?? []).map((m) => ({
+      ...m,
+      projectRole: 'member' as const,
+    })),
+    ...(project?.clients ?? []).map((c) => ({
+      ...c,
+      projectRole: 'client' as const,
+    })),
+  ];
 
   return (
     <div className="mx-auto max-w-2xl p-6">
       <h2 className="text-base font-semibold text-primary">Project Settings</h2>
-      <p className="mt-1 text-sm text-secondary">Manage project details and configuration.</p>
+      <p className="mt-1 text-sm text-secondary">Manage project details and team.</p>
 
+      {/* Project Info */}
       <div className="mt-6 rounded-lg border border-subtle bg-surface p-6">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit((v) => updateProject.mutate(v))} className="space-y-4">
           <div className="space-y-1.5">
             <Label className="text-sm font-medium text-primary">Project Name</Label>
             <Input {...form.register('name')} />
@@ -145,7 +165,6 @@ export default function ProjectSettingsPage() {
               <p className="text-sm text-error">{form.formState.errors.name.message}</p>
             )}
           </div>
-
           <div className="space-y-1.5">
             <Label className="text-sm font-medium text-primary">Description</Label>
             <textarea
@@ -154,7 +173,6 @@ export default function ProjectSettingsPage() {
               className="w-full rounded-md border border-[var(--color-border-default)] bg-surface px-3 py-2 text-sm text-primary placeholder:text-[var(--color-text-muted)] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             />
           </div>
-
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={updateProject.isPending}>
               {updateProject.isPending ? 'Saving...' : 'Save Changes'}
@@ -170,7 +188,7 @@ export default function ProjectSettingsPage() {
           <div>
             <h3 className="text-sm font-semibold text-primary">Team Members</h3>
             <p className="mt-1 text-sm text-secondary">
-              Manage who has access to this project.
+              {(allMembers.length + 1)} member{allMembers.length !== 0 ? 's' : ''} on this project
             </p>
           </div>
           {isAdmin && (
@@ -184,90 +202,43 @@ export default function ProjectSettingsPage() {
         <div className="mt-4 divide-y divide-subtle">
           {/* Owner */}
           {project?.owner && (
-            <div className="flex items-center gap-3 py-3">
-              <Avatar
-                size={32}
-                variant="beam"
-                name={project.owner.name}
-                colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9']}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-primary truncate">{project.owner.name}</p>
-                <p className="text-xs text-[var(--color-text-muted)] truncate">{project.owner.email}</p>
-              </div>
-              <Badge className="bg-[var(--color-accent-muted)] text-[var(--color-accent-text)]">
-                Owner
-              </Badge>
-            </div>
+            <MemberRow
+              name={project.owner.name}
+              email={project.owner.email}
+              role="Owner"
+              roleStyle="bg-[var(--color-accent-muted)] text-[var(--color-accent-text)]"
+            />
           )}
 
-          {/* Members */}
-          {project?.members
-            ?.filter((m) => (m.id ?? m._id) !== ownerId)
-            .map((member) => {
-              const memberId = member.id ?? member._id;
-              return (
-                <div key={memberId} className="flex items-center gap-3 py-3">
-                  <Avatar
-                    size={32}
-                    variant="beam"
-                    name={member.name}
-                    colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9']}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-primary truncate">{member.name}</p>
-                    <p className="text-xs text-[var(--color-text-muted)] truncate">{member.email}</p>
-                  </div>
-                  <Badge className="bg-[var(--color-info-muted)] text-[var(--color-info)]">
-                    Member
-                  </Badge>
-                  {isAdmin && (
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className="text-[var(--color-error)]"
-                      onClick={() => memberId && removeMember.mutate(memberId)}
-                      disabled={removeMember.isPending}
-                    >
-                      <Trash size={14} />
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-
-          {/* Clients */}
-          {project?.clients?.map((client) => {
-            const clientId = client.id ?? client._id;
+          {/* Members + Clients */}
+          {allMembers.map((member) => {
+            const id = member.id ?? member._id ?? '';
+            const isClient = member.projectRole === 'client';
             return (
-              <div key={clientId} className="flex items-center gap-3 py-3">
-                <Avatar
-                  size={32}
-                  variant="beam"
-                  name={client.name}
-                  colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9']}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-primary truncate">{client.name}</p>
-                  <p className="text-xs text-[var(--color-text-muted)] truncate">{client.email}</p>
-                </div>
-                <Badge className="bg-[var(--color-info-muted)] text-[var(--color-info)]">
-                  Client
-                </Badge>
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="text-[var(--color-error)]"
-                    onClick={() => clientId && removeMember.mutate(clientId)}
-                    disabled={removeMember.isPending}
-                  >
-                    <Trash size={14} />
-                  </Button>
-                )}
-              </div>
+              <MemberRow
+                key={id}
+                name={member.name}
+                email={member.email}
+                role={isClient ? 'Client' : 'Member'}
+                roleStyle={isClient
+                  ? 'bg-[var(--color-info-muted)] text-[var(--color-info)]'
+                  : 'bg-[var(--color-success-muted)] text-[var(--color-success)]'
+                }
+                onRemove={isAdmin ? () => {
+                  if (confirm(`Remove ${member.name} from this project?`)) {
+                    removeMember.mutate({ userId: id, role: member.projectRole });
+                  }
+                } : undefined}
+                removing={removeMember.isPending}
+              />
             );
           })}
+
+          {allMembers.length === 0 && !project?.owner && (
+            <div className="py-6 text-center text-sm text-secondary">
+              No members yet. Add team members to collaborate.
+            </div>
+          )}
         </div>
       </div>
 
@@ -276,56 +247,103 @@ export default function ProjectSettingsPage() {
         <DialogContent className="bg-surface border-[var(--color-border-subtle)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-primary">
-              Add Member
+              Add Member to Project
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-sm font-medium text-primary">User</Label>
+              <Label className="text-sm font-medium text-primary">Select User</Label>
               <Select value={selectedUserId} onValueChange={(v) => setSelectedUserId(v ?? '')}>
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Select a user" />
+                  <SelectValue placeholder="Choose a team member" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableUsers.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name} ({u.email})
-                    </SelectItem>
-                  ))}
+                  {availableUsers.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
+                      All users are already on this project
+                    </div>
+                  ) : (
+                    availableUsers.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{u.name}</span>
+                          <span className="text-[var(--color-text-muted)]">({u.email})</span>
+                          <Badge className={`${ROLE_BADGE[u.role] ?? ''} ml-1 text-[10px] px-1.5 py-0`}>
+                            {u.role}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
-            <div>
-              <Label className="text-sm font-medium text-primary">Role</Label>
-              <Select value={memberRole} onValueChange={(v) => setMemberRole(v ?? 'member')}>
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="client">Client</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {selectedUser && (
+              <div className="rounded-md bg-subtle px-3 py-2 text-xs text-secondary">
+                <strong>{selectedUser.name}</strong> will be added as{' '}
+                <strong>{autoRole === 'client' ? 'a Client (read-only)' : 'a Member (full access)'}</strong>
+                {' '}based on their platform role.
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" onClick={() => setAddMemberOpen(false)}>
+              <Button variant="ghost" onClick={() => { setAddMemberOpen(false); setSelectedUserId(''); }}>
                 Cancel
               </Button>
               <Button
-                onClick={() =>
-                  selectedUserId &&
-                  addMember.mutate({ userId: selectedUserId, role: memberRole })
-                }
+                onClick={() => selectedUserId && addMember.mutate({ userId: selectedUserId, role: autoRole })}
                 disabled={!selectedUserId || addMember.isPending}
               >
-                {addMember.isPending ? 'Adding...' : 'Add Member'}
+                {addMember.isPending ? 'Adding...' : 'Add to Project'}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function MemberRow({
+  name,
+  email,
+  role,
+  roleStyle,
+  onRemove,
+  removing,
+}: {
+  name: string;
+  email: string;
+  role: string;
+  roleStyle: string;
+  onRemove?: () => void;
+  removing?: boolean;
+}) {
+  return (
+    <div className="group flex items-center gap-3 py-3">
+      <Avatar
+        size={32}
+        variant="beam"
+        name={name}
+        colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9']}
+      />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-primary truncate">{name}</p>
+        <p className="text-xs text-[var(--color-text-muted)] truncate">{email}</p>
+      </div>
+      <Badge className={roleStyle}>{role}</Badge>
+      {onRemove && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="text-[var(--color-error)] opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={onRemove}
+          disabled={removing}
+        >
+          <Trash size={14} />
+        </Button>
+      )}
     </div>
   );
 }

@@ -26,7 +26,7 @@ export function PortalProjectCard({ project }: PortalProjectCardProps) {
   const progress = project.progress ?? 0;
 
   return (
-    <Link href={`/projects/${project.id}`} className="block">
+    <Link href={`/portal/projects/${project.id}`} className="block">
       <Card className="transition-shadow duration-[120ms] hover:shadow-sm">
         <CardHeader>
           <CardTitle>{project.name}</CardTitle>
