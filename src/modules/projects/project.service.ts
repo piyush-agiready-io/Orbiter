@@ -86,6 +86,27 @@ export const ProjectService = {
     return project;
   },
 
+  async delete(id: string) {
+    const project = await Project.findByIdAndDelete(id);
+    if (!project) throw new NotFoundError('Project');
+
+    const { Task } = await import('@/modules/tasks/task.model');
+    const { Sprint } = await import('@/modules/sprints/sprint.model');
+    const { Bug } = await import('@/modules/bugs/bug.model');
+    const { Doc } = await import('@/modules/docs/doc.model');
+    const { Link } = await import('@/modules/links/link.model');
+
+    await Promise.all([
+      Task.deleteMany({ project: id }),
+      Sprint.deleteMany({ project: id }),
+      Bug.deleteMany({ project: id }),
+      Doc.deleteMany({ project: id }),
+      Link.deleteMany({ project: id }),
+    ]).catch(() => {});
+
+    return project;
+  },
+
   async addMember(projectId: string, userId: string, role: 'member' | 'client') {
     const field = role === 'client' ? 'clients' : 'members';
     const project = await Project.findByIdAndUpdate(

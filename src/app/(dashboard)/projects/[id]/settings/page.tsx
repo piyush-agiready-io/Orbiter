@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Trash, UserPlus, Clock, CheckCircle } from '@phosphor-icons/react';
-import { useProject } from '@/hooks/queries/use-projects';
+import { Trash, UserPlus, Clock, CheckCircle, Warning } from '@phosphor-icons/react';
+import { useProject, useDeleteProject } from '@/hooks/queries/use-projects';
 import { useUsers } from '@/hooks/queries/use-users';
 import { useAuth } from '@/hooks/use-auth';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
@@ -79,6 +79,9 @@ export default function ProjectSettingsPage() {
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [removingMember, setRemovingMember] = useState<{ id: string; name: string; role: string } | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const router = useRouter();
+  const deleteProject = useDeleteProject();
 
   const project = data as ProjectData | undefined;
   const isAdmin = currentUser?.role === 'admin';
@@ -304,6 +307,24 @@ export default function ProjectSettingsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Danger Zone */}
+      {isAdmin && (
+        <div className="mt-6 rounded-lg border border-[var(--color-error)]/20 bg-surface p-6">
+          <h3 className="text-sm font-semibold text-[var(--color-error)]">Danger Zone</h3>
+          <p className="mt-1 text-sm text-secondary">
+            Permanently delete this project and all its tasks, sprints, bugs, docs, and links.
+          </p>
+          <Button
+            variant="destructive"
+            className="mt-3"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash size={14} className="mr-1.5" />
+            Delete Project
+          </Button>
+        </div>
+      )}
+
       <ConfirmDialog
         open={!!removingMember}
         onOpenChange={(open) => !open && setRemovingMember(null)}
@@ -313,6 +334,21 @@ export default function ProjectSettingsPage() {
         variant="danger"
         onConfirm={() => removingMember && removeMember.mutate({ userId: removingMember.id, role: removingMember.role })}
         loading={removeMember.isPending}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete project"
+        description={`"${project?.name}" and all its data will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Delete Project"
+        variant="danger"
+        onConfirm={() => {
+          deleteProject.mutate(params.id, {
+            onSuccess: () => router.replace('/'),
+          });
+        }}
+        loading={deleteProject.isPending}
       />
     </div>
   );

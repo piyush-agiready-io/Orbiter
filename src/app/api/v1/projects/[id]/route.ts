@@ -14,6 +14,14 @@ export const GET = apiHandler({
   },
 });
 
+export const DELETE = apiHandler({
+  middleware: [requireRole('admin')],
+  handler: async (_req, ctx) => {
+    await ProjectService.delete(ctx.params.id);
+    return { data: { deleted: true } };
+  },
+});
+
 export const PATCH = apiHandler({
   middleware: [requireRole('admin', 'internal')],
   validate: { body: updateProjectSchema },
