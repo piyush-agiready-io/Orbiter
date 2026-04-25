@@ -1,0 +1,1027 @@
+{
+  "app/(auth)/layout.tsx": [],
+  "app/(auth)/login/page.tsx": [
+    "hooks/use-auth.ts",
+    "modules/auth/auth.validator.ts"
+  ],
+  "app/(dashboard)/layout.tsx": [
+    "components/layouts/dashboard-keyboard-shortcuts.tsx",
+    "components/layouts/dashboard-sidebar.tsx",
+    "components/layouts/topbar.tsx",
+    "components/providers/auth-provider.tsx"
+  ],
+  "app/(dashboard)/my-work/page.tsx": [
+    "components/features/my-work/my-work-group.tsx",
+    "components/features/my-work/my-work-task-row.tsx",
+    "hooks/queries/use-my-tasks.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "app/(dashboard)/page.tsx": [],
+  "app/(dashboard)/projects/[id]/backlog/page.tsx": [
+    "components/features/tasks/table-view.tsx",
+    "components/features/tasks/task-detail-panel.tsx",
+    "modules/tasks/task.types.ts"
+  ],
+  "app/(dashboard)/projects/[id]/board/page.tsx": [
+    "components/features/kanban/kanban-board.tsx",
+    "components/features/kanban/kanban-filter-bar.tsx",
+    "components/features/tasks/task-detail-panel.tsx",
+    "components/features/tasks/task-form.tsx",
+    "hooks/queries/use-tasks.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "app/(dashboard)/projects/[id]/bugs/[bugId]/page.tsx": [
+    "components/features/bugs/bug-detail.tsx"
+  ],
+  "app/(dashboard)/projects/[id]/bugs/page.tsx": [
+    "components/features/bugs/bug-list.tsx"
+  ],
+  "app/(dashboard)/projects/[id]/docs/[docId]/page.tsx": [
+    "components/features/docs/doc-editor.tsx",
+    "components/ui/button.tsx",
+    "components/ui/input.tsx",
+    "components/ui/skeleton.tsx",
+    "hooks/queries/use-docs.ts"
+  ],
+  "app/(dashboard)/projects/[id]/docs/page.tsx": [
+    "components/features/docs/doc-list.tsx"
+  ],
+  "app/(dashboard)/projects/[id]/env/page.tsx": [
+    "components/features/env-variables/env-table.tsx"
+  ],
+  "app/(dashboard)/projects/[id]/epics/page.tsx": [
+    "components/features/epics/epic-form.tsx",
+    "components/features/epics/epic-list.tsx"
+  ],
+  "app/(dashboard)/projects/[id]/layout.tsx": [
+    "hooks/use-recents.ts"
+  ],
+  "app/(dashboard)/projects/[id]/links/page.tsx": [
+    "components/features/links/link-grid.tsx"
+  ],
+  "app/(dashboard)/projects/[id]/sprints/page.tsx": [
+    "components/features/sprints/sprint-board.tsx",
+    "components/features/sprints/sprint-close-dialog.tsx",
+    "components/features/sprints/sprint-list.tsx",
+    "components/features/tasks/task-detail-panel.tsx",
+    "modules/tasks/task.types.ts"
+  ],
+  "app/(dashboard)/projects/[id]/table/page.tsx": [
+    "components/features/table/bulk-actions-bar.tsx",
+    "components/features/tasks/task-detail-panel.tsx",
+    "components/shared/data-table.tsx",
+    "components/ui/avatar.tsx",
+    "components/ui/badge.tsx",
+    "hooks/queries/use-tasks.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "app/(dashboard)/projects/[id]/timeline/page.tsx": [
+    "components/features/timeline/timeline-chart.tsx",
+    "hooks/queries/use-epics.ts",
+    "hooks/queries/use-sprints.ts"
+  ],
+  "app/(dashboard)/settings/chatgpt/page.tsx": [
+    "components/features/settings/chatgpt-connection.tsx"
+  ],
+  "app/api/cron/github-sync/route.ts": [
+    "config/env.ts",
+    "modules/ai/agents/github-sync.agent.ts",
+    "modules/projects/project.model.ts",
+    "shared/database/connection.ts"
+  ],
+  "app/api/v1/auth/forgot-password/route.ts": [
+    "modules/auth/auth.service.ts",
+    "modules/auth/auth.validator.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/auth/login/route.ts": [
+    "modules/auth/auth.service.ts",
+    "modules/auth/auth.validator.ts",
+    "shared/database/connection.ts",
+    "shared/middleware/auth.ts",
+    "shared/middleware/validate.ts",
+    "shared/utils/api-response.ts"
+  ],
+  "app/api/v1/auth/openai/disconnect/route.ts": [
+    "modules/ai/openai-connection.service.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/auth/openai/poll/route.ts": [
+    "modules/ai/openai-connection.service.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/auth/openai/route.ts": [
+    "modules/ai/openai-connection.service.ts",
+    "modules/ai/openai-connection.validator.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/auth/openai/status/route.ts": [
+    "modules/ai/openai-connection.service.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/auth/refresh/route.ts": [
+    "modules/users/user.model.ts",
+    "shared/database/connection.ts",
+    "shared/lib/tokens.ts",
+    "shared/utils/api-response.ts"
+  ],
+  "app/api/v1/auth/register/route.ts": [
+    "modules/auth/auth.service.ts",
+    "modules/auth/auth.validator.ts",
+    "shared/database/connection.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/auth.ts",
+    "shared/middleware/validate.ts",
+    "shared/utils/api-response.ts"
+  ],
+  "app/api/v1/auth/reset-password/route.ts": [
+    "modules/auth/auth.service.ts",
+    "modules/auth/auth.validator.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/bugs/[id]/link/route.ts": [
+    "modules/bugs/bug.service.ts",
+    "modules/bugs/bug.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/bugs/[id]/route.ts": [
+    "modules/bugs/bug.service.ts",
+    "modules/bugs/bug.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/comments/[id]/route.ts": [
+    "modules/comments/comment.service.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/deepgram/token/route.ts": [
+    "modules/deepgram/deepgram.service.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/docs/[id]/route.ts": [
+    "modules/docs/doc.service.ts",
+    "modules/docs/doc.validator.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/docs/[id]/upload/route.ts": [
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/env/[id]/reveal/route.ts": [
+    "modules/env-variables/env-variable.service.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/env/[id]/route.ts": [
+    "modules/env-variables/env-variable.service.ts",
+    "modules/env-variables/env-variable.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/epics/[id]/route.ts": [
+    "modules/epics/epic.service.ts",
+    "modules/epics/epic.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/health/route.ts": [],
+  "app/api/v1/links/[id]/route.ts": [
+    "modules/links/link.service.ts",
+    "modules/links/link.validator.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/notifications/[id]/read/route.ts": [
+    "modules/notifications/notification.service.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/notifications/mark-all-read/route.ts": [
+    "modules/notifications/notification.service.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/notifications/route.ts": [
+    "modules/notifications/notification.service.ts",
+    "modules/notifications/notification.validator.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/notifications/unread-count/route.ts": [
+    "modules/notifications/notification.service.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/portal/projects/[id]/epics/route.ts": [
+    "modules/epics/epic.service.ts",
+    "modules/projects/project.service.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/portal/projects/[id]/links/route.ts": [
+    "modules/links/link.service.ts",
+    "modules/projects/project.service.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/portal/projects/[id]/route.ts": [
+    "modules/projects/project.service.ts",
+    "modules/tasks/task.service.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/portal/projects/[id]/tasks/route.ts": [
+    "modules/projects/project.service.ts",
+    "modules/tasks/task.service.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/portal/projects/route.ts": [
+    "modules/projects/project.service.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/projects/[id]/bugs/[bugId]/comments/route.ts": [
+    "modules/comments/comment.service.ts",
+    "modules/comments/comment.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts"
+  ],
+  "app/api/v1/projects/[id]/bugs/route.ts": [
+    "modules/bugs/bug.service.ts",
+    "modules/bugs/bug.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts"
+  ],
+  "app/api/v1/projects/[id]/docs/route.ts": [
+    "modules/docs/doc.service.ts",
+    "modules/docs/doc.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts"
+  ],
+  "app/api/v1/projects/[id]/docs/search/route.ts": [
+    "modules/docs/doc.service.ts",
+    "modules/docs/doc.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts"
+  ],
+  "app/api/v1/projects/[id]/env/audit/route.ts": [
+    "modules/env-variables/env-variable.service.ts",
+    "modules/env-variables/env-variable.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/projects/[id]/env/export/route.ts": [
+    "modules/env-variables/env-variable.service.ts",
+    "modules/env-variables/env-variable.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/projects/[id]/env/route.ts": [
+    "modules/env-variables/env-variable.service.ts",
+    "modules/env-variables/env-variable.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/projects/[id]/epics/route.ts": [
+    "modules/epics/epic.service.ts",
+    "modules/epics/epic.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/projects/[id]/links/route.ts": [
+    "modules/links/link.service.ts",
+    "modules/links/link.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts"
+  ],
+  "app/api/v1/projects/[id]/members/route.ts": [
+    "modules/projects/project.service.ts",
+    "modules/projects/project.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/projects/[id]/route.ts": [
+    "modules/projects/project.service.ts",
+    "modules/projects/project.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/projects/[id]/sprints/route.ts": [
+    "modules/sprints/sprint.service.ts",
+    "modules/sprints/sprint.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/projects/[id]/tasks/[taskId]/comments/route.ts": [
+    "modules/comments/comment.service.ts",
+    "modules/comments/comment.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts"
+  ],
+  "app/api/v1/projects/[id]/tasks/route.ts": [
+    "modules/tasks/task.service.ts",
+    "modules/tasks/task.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/project-access.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/projects/route.ts": [
+    "modules/projects/project.service.ts",
+    "modules/projects/project.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/sprints/[id]/close/route.ts": [
+    "modules/sprints/sprint.service.ts",
+    "modules/sprints/sprint.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/sprints/[id]/route.ts": [
+    "modules/sprints/sprint.service.ts",
+    "modules/sprints/sprint.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/sprints/[id]/tasks/route.ts": [
+    "modules/sprints/sprint.service.ts",
+    "modules/sprints/sprint.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/tasks/[id]/reorder/route.ts": [
+    "modules/tasks/task.service.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/tasks/[id]/route.ts": [
+    "modules/tasks/task.service.ts",
+    "modules/tasks/task.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/tasks/[id]/status/route.ts": [
+    "modules/tasks/task.service.ts",
+    "modules/tasks/task.validator.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/tasks/bulk/route.ts": [
+    "modules/tasks/task.service.ts",
+    "modules/tasks/task.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/tasks/my/route.ts": [
+    "modules/tasks/task.service.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/users/invite/route.ts": [
+    "modules/users/user.service.ts",
+    "modules/users/user.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/api/v1/users/me/route.ts": [
+    "modules/users/user.service.ts",
+    "modules/users/user.validator.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "app/api/v1/users/route.ts": [
+    "modules/users/user.service.ts",
+    "modules/users/user.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "app/globals.css": [],
+  "app/layout.tsx": [
+    "app/globals.css",
+    "components/features/command-palette/command-palette-provider.tsx",
+    "components/providers/query-provider.tsx",
+    "lib/utils.ts"
+  ],
+  "app/portal/(portal)/layout.tsx": [
+    "components/layouts/portal-sidebar.tsx",
+    "components/providers/auth-provider.tsx"
+  ],
+  "app/portal/(portal)/page.tsx": [
+    "components/features/portal/portal-project-card.tsx",
+    "hooks/queries/use-portal-data.ts"
+  ],
+  "app/portal/(portal)/projects/[id]/board/page.tsx": [
+    "components/features/portal/portal-kanban-board.tsx",
+    "hooks/queries/use-portal-data.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "app/portal/(portal)/projects/[id]/layout.tsx": [
+    "hooks/queries/use-portal-data.ts"
+  ],
+  "app/portal/(portal)/projects/[id]/links/page.tsx": [
+    "components/ui/badge.tsx",
+    "components/ui/card.tsx",
+    "hooks/queries/use-portal-data.ts"
+  ],
+  "app/portal/(portal)/projects/[id]/page.tsx": [
+    "components/features/portal/portal-progress-card.tsx",
+    "hooks/queries/use-portal-data.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "app/portal/(portal)/projects/[id]/timeline/page.tsx": [
+    "components/features/timeline/timeline-chart.tsx",
+    "hooks/queries/use-portal-data.ts"
+  ],
+  "components/features/bugs/bug-detail.tsx": [
+    "components/features/comments/comment-input.tsx",
+    "components/features/comments/comment-list.tsx",
+    "components/ui/badge.tsx",
+    "components/ui/button.tsx",
+    "components/ui/select.tsx",
+    "components/ui/separator.tsx",
+    "components/ui/skeleton.tsx",
+    "hooks/queries/use-bugs.ts"
+  ],
+  "components/features/bugs/bug-list.tsx": [
+    "components/features/bugs/create-bug-dialog.tsx",
+    "components/ui/button.tsx",
+    "components/ui/input.tsx",
+    "components/ui/select.tsx",
+    "components/ui/skeleton.tsx",
+    "hooks/queries/use-bugs.ts"
+  ],
+  "components/features/bugs/create-bug-dialog.tsx": [
+    "components/ui/button.tsx",
+    "components/ui/dialog.tsx",
+    "components/ui/input.tsx",
+    "components/ui/label.tsx",
+    "components/ui/select.tsx",
+    "hooks/queries/use-bugs.ts"
+  ],
+  "components/features/command-palette/command-palette-provider.tsx": [
+    "components/features/command-palette/command-palette.tsx",
+    "hooks/queries/use-projects.ts"
+  ],
+  "components/features/command-palette/command-palette-result.tsx": [],
+  "components/features/command-palette/command-palette.tsx": [
+    "components/features/command-palette/command-palette-result.tsx"
+  ],
+  "components/features/comments/comment-input.tsx": [
+    "components/ui/button.tsx",
+    "hooks/queries/use-comments.ts"
+  ],
+  "components/features/comments/comment-list.tsx": [
+    "components/ui/button.tsx",
+    "components/ui/skeleton.tsx",
+    "hooks/queries/use-comments.ts",
+    "hooks/use-auth.ts"
+  ],
+  "components/features/docs/doc-editor.tsx": [
+    "components/ui/button.tsx"
+  ],
+  "components/features/docs/doc-list.tsx": [
+    "components/ui/button.tsx",
+    "components/ui/dialog.tsx",
+    "components/ui/dropdown-menu.tsx",
+    "components/ui/input.tsx",
+    "hooks/queries/use-docs.ts"
+  ],
+  "components/features/env-variables/env-table.tsx": [
+    "components/ui/badge.tsx",
+    "components/ui/button.tsx",
+    "components/ui/dialog.tsx",
+    "components/ui/input.tsx",
+    "components/ui/label.tsx",
+    "components/ui/select.tsx",
+    "components/ui/tabs.tsx",
+    "hooks/queries/use-env-variables.ts"
+  ],
+  "components/features/epics/epic-form.tsx": [
+    "components/ui/button.tsx",
+    "components/ui/dialog.tsx",
+    "components/ui/input.tsx",
+    "components/ui/label.tsx",
+    "components/ui/select.tsx",
+    "hooks/queries/use-epics.ts"
+  ],
+  "components/features/epics/epic-list.tsx": [
+    "components/ui/badge.tsx",
+    "components/ui/button.tsx",
+    "components/ui/dropdown-menu.tsx",
+    "hooks/queries/use-epics.ts"
+  ],
+  "components/features/kanban/kanban-board.tsx": [
+    "components/features/kanban/kanban-card.tsx",
+    "components/features/kanban/kanban-column.tsx",
+    "modules/tasks/task.types.ts",
+    "shared/lib/api-client.ts"
+  ],
+  "components/features/kanban/kanban-card-skeleton.tsx": [],
+  "components/features/kanban/kanban-card.tsx": [
+    "lib/utils.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "components/features/kanban/kanban-column.tsx": [
+    "components/features/kanban/kanban-card-skeleton.tsx",
+    "components/features/kanban/kanban-card.tsx",
+    "lib/utils.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "components/features/kanban/kanban-filter-bar.tsx": [
+    "components/ui/button.tsx",
+    "components/ui/input.tsx",
+    "components/ui/select.tsx"
+  ],
+  "components/features/links/link-grid.tsx": [
+    "components/ui/badge.tsx",
+    "components/ui/button.tsx",
+    "components/ui/card.tsx",
+    "components/ui/dialog.tsx",
+    "components/ui/dropdown-menu.tsx",
+    "components/ui/input.tsx",
+    "components/ui/label.tsx",
+    "components/ui/select.tsx",
+    "hooks/queries/use-links.ts"
+  ],
+  "components/features/my-work/my-work-group.tsx": [
+    "components/features/my-work/my-work-task-row.tsx"
+  ],
+  "components/features/my-work/my-work-task-row.tsx": [
+    "modules/tasks/task.types.ts"
+  ],
+  "components/features/notifications/notification-dropdown.tsx": [
+    "components/ui/button.tsx",
+    "components/ui/skeleton.tsx",
+    "hooks/queries/use-notifications.ts"
+  ],
+  "components/features/portal/portal-kanban-board.tsx": [
+    "lib/utils.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "components/features/portal/portal-progress-card.tsx": [
+    "components/ui/card.tsx"
+  ],
+  "components/features/portal/portal-project-card.tsx": [
+    "components/ui/badge.tsx",
+    "components/ui/card.tsx"
+  ],
+  "components/features/settings/chatgpt-connection.tsx": [
+    "components/features/settings/chatgpt-status-badge.tsx",
+    "components/features/settings/device-code-display.tsx",
+    "components/ui/button.tsx",
+    "hooks/queries/use-openai-connection.ts"
+  ],
+  "components/features/settings/chatgpt-status-badge.tsx": [],
+  "components/features/settings/device-code-display.tsx": [
+    "components/ui/button.tsx"
+  ],
+  "components/features/sprints/sprint-board.tsx": [
+    "components/features/tasks/kanban-board.tsx",
+    "components/ui/button.tsx",
+    "hooks/queries/use-sprints.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "components/features/sprints/sprint-close-dialog.tsx": [
+    "components/ui/button.tsx",
+    "components/ui/dialog.tsx",
+    "components/ui/label.tsx",
+    "hooks/queries/use-sprints.ts",
+    "hooks/queries/use-tasks.ts"
+  ],
+  "components/features/sprints/sprint-list.tsx": [
+    "components/ui/badge.tsx",
+    "components/ui/button.tsx",
+    "hooks/queries/use-sprints.ts"
+  ],
+  "components/features/sprints/sprint-suggestion-banner.tsx": [
+    "components/ui/button.tsx"
+  ],
+  "components/features/table/bulk-actions-bar.tsx": [
+    "components/ui/button.tsx",
+    "components/ui/select.tsx"
+  ],
+  "components/features/tasks/kanban-board.tsx": [
+    "components/features/tasks/kanban-column.tsx",
+    "components/features/tasks/task-card.tsx",
+    "hooks/queries/use-tasks.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "components/features/tasks/kanban-column.tsx": [
+    "components/features/tasks/task-card.tsx",
+    "lib/utils.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "components/features/tasks/table-view.tsx": [
+    "components/ui/badge.tsx",
+    "components/ui/select.tsx",
+    "hooks/queries/use-tasks.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "components/features/tasks/task-card.tsx": [
+    "components/ui/badge.tsx",
+    "lib/utils.ts",
+    "modules/tasks/task.types.ts"
+  ],
+  "components/features/tasks/task-detail-panel.tsx": [
+    "components/ui/badge.tsx",
+    "components/ui/select.tsx",
+    "hooks/queries/use-tasks.ts"
+  ],
+  "components/features/tasks/task-filters.tsx": [
+    "components/ui/input.tsx",
+    "components/ui/select.tsx",
+    "hooks/queries/use-epics.ts",
+    "hooks/queries/use-sprints.ts"
+  ],
+  "components/features/tasks/task-form.tsx": [
+    "components/ui/button.tsx",
+    "components/ui/dialog.tsx",
+    "components/ui/input.tsx",
+    "components/ui/label.tsx",
+    "components/ui/select.tsx",
+    "hooks/queries/use-epics.ts",
+    "hooks/queries/use-sprints.ts",
+    "hooks/queries/use-tasks.ts"
+  ],
+  "components/features/timeline/timeline-chart.tsx": [
+    "components/features/timeline/timeline-header.tsx",
+    "components/features/timeline/timeline-row.tsx"
+  ],
+  "components/features/timeline/timeline-header.tsx": [],
+  "components/features/timeline/timeline-row.tsx": [],
+  "components/layouts/dashboard-keyboard-shortcuts.tsx": [
+    "components/layouts/keyboard-shortcuts-overlay.tsx",
+    "hooks/use-keyboard-shortcuts.ts"
+  ],
+  "components/layouts/dashboard-sidebar.tsx": [
+    "hooks/queries/use-projects.ts",
+    "hooks/use-favorites.ts",
+    "hooks/use-recents.ts"
+  ],
+  "components/layouts/keyboard-shortcuts-overlay.tsx": [],
+  "components/layouts/portal-sidebar.tsx": [
+    "hooks/queries/use-portal-data.ts"
+  ],
+  "components/layouts/topbar.tsx": [
+    "components/features/notifications/notification-dropdown.tsx",
+    "hooks/queries/use-notifications.ts",
+    "hooks/use-auth.ts"
+  ],
+  "components/providers/auth-provider.tsx": [
+    "hooks/use-auth.ts"
+  ],
+  "components/providers/query-provider.tsx": [],
+  "components/shared/data-table.tsx": [
+    "components/ui/button.tsx",
+    "components/ui/skeleton.tsx",
+    "lib/utils.ts"
+  ],
+  "components/ui/avatar.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/badge.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/button.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/card.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/dialog.tsx": [
+    "components/ui/button.tsx",
+    "lib/utils.ts"
+  ],
+  "components/ui/dropdown-menu.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/input.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/label.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/select.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/separator.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/skeleton.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/sonner.tsx": [],
+  "components/ui/tabs.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/tooltip.tsx": [
+    "lib/utils.ts"
+  ],
+  "config/env.ts": [],
+  "hooks/queries/use-bugs.ts": [
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-comments.ts": [
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-docs.ts": [
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-env-variables.ts": [
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-epics.ts": [
+    "modules/epics/epic.types.ts",
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-links.ts": [
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-my-tasks.ts": [
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-notifications.ts": [
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-openai-connection.ts": [
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-portal-data.ts": [
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-projects.ts": [
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-sprints.ts": [
+    "modules/sprints/sprint.types.ts",
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/queries/use-tasks.ts": [
+    "modules/tasks/task.types.ts",
+    "shared/lib/api-client.ts"
+  ],
+  "hooks/use-auth.ts": [],
+  "hooks/use-favorites.ts": [],
+  "hooks/use-keyboard-shortcuts.ts": [],
+  "hooks/use-recents.ts": [],
+  "lib/utils.ts": [],
+  "modules/ai/agents/github-sync.agent.ts": [
+    "modules/ai/agents/status-update.agent.ts",
+    "modules/ai/codex-client.ts",
+    "modules/ai/resolve-api-key.ts",
+    "modules/github/github.service.ts",
+    "modules/github/github.types.ts",
+    "modules/notifications/notification.service.ts"
+  ],
+  "modules/ai/agents/priority-detection.agent.ts": [
+    "modules/ai/codex-client.ts",
+    "modules/ai/resolve-api-key.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/ai/agents/sprint-assignment.agent.ts": [
+    "modules/ai/codex-client.ts",
+    "modules/ai/resolve-api-key.ts",
+    "modules/sprints/sprint.service.ts",
+    "modules/users/user.service.ts"
+  ],
+  "modules/ai/agents/status-update.agent.ts": [
+    "modules/bugs/bug.model.ts",
+    "modules/github/github.service.ts",
+    "modules/notifications/notification.model.ts",
+    "modules/projects/project.model.ts",
+    "modules/tasks/task.model.ts"
+  ],
+  "modules/ai/codex-client.ts": [
+    "shared/utils/constants.ts"
+  ],
+  "modules/ai/openai-connection.model.ts": [
+    "modules/ai/openai-connection.types.ts"
+  ],
+  "modules/ai/openai-connection.service.ts": [
+    "modules/ai/openai-connection.model.ts",
+    "modules/ai/openai-connection.types.ts",
+    "modules/ai/openai-device-session.model.ts",
+    "modules/ai/openai-oauth.ts",
+    "shared/lib/encryption.ts",
+    "shared/middleware/api-handler.ts"
+  ],
+  "modules/ai/openai-connection.types.ts": [],
+  "modules/ai/openai-connection.validator.ts": [],
+  "modules/ai/openai-device-session.model.ts": [],
+  "modules/ai/openai-oauth.ts": [
+    "shared/utils/constants.ts"
+  ],
+  "modules/ai/resolve-api-key.ts": [
+    "modules/ai/openai-connection.service.ts"
+  ],
+  "modules/audit-logs/audit-log.model.ts": [
+    "modules/audit-logs/audit-log.types.ts"
+  ],
+  "modules/audit-logs/audit-log.types.ts": [],
+  "modules/auth/auth.service.ts": [
+    "modules/auth/auth.types.ts",
+    "modules/auth/auth.validator.ts",
+    "modules/users/user.model.ts",
+    "shared/lib/tokens.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/auth.ts"
+  ],
+  "modules/auth/auth.types.ts": [
+    "modules/users/user.types.ts"
+  ],
+  "modules/auth/auth.validator.ts": [],
+  "modules/bugs/bug.model.ts": [
+    "modules/bugs/bug.types.ts"
+  ],
+  "modules/bugs/bug.service.ts": [
+    "modules/bugs/bug.model.ts",
+    "modules/bugs/bug.validator.ts",
+    "modules/notifications/notification.service.ts",
+    "modules/tasks/task.model.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/bugs/bug.types.ts": [],
+  "modules/bugs/bug.validator.ts": [],
+  "modules/comments/comment.model.ts": [],
+  "modules/comments/comment.service.ts": [
+    "modules/comments/comment.model.ts",
+    "modules/comments/comment.validator.ts",
+    "modules/notifications/notification.service.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/comments/comment.types.ts": [],
+  "modules/comments/comment.validator.ts": [],
+  "modules/deepgram/deepgram.service.ts": [
+    "config/env.ts",
+    "modules/deepgram/deepgram.types.ts"
+  ],
+  "modules/deepgram/deepgram.types.ts": [],
+  "modules/docs/doc.model.ts": [
+    "modules/docs/doc.types.ts"
+  ],
+  "modules/docs/doc.service.ts": [
+    "modules/docs/doc.model.ts",
+    "modules/docs/doc.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/docs/doc.types.ts": [],
+  "modules/docs/doc.validator.ts": [],
+  "modules/env-variables/env-variable.model.ts": [
+    "modules/env-variables/env-variable.types.ts"
+  ],
+  "modules/env-variables/env-variable.service.ts": [
+    "modules/audit-logs/audit-log.model.ts",
+    "modules/audit-logs/audit-log.types.ts",
+    "modules/env-variables/env-variable.model.ts",
+    "modules/env-variables/env-variable.validator.ts",
+    "shared/lib/encryption.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/env-variables/env-variable.types.ts": [],
+  "modules/env-variables/env-variable.validator.ts": [],
+  "modules/epics/epic.model.ts": [
+    "modules/epics/epic.types.ts"
+  ],
+  "modules/epics/epic.service.ts": [
+    "modules/epics/epic.model.ts",
+    "modules/epics/epic.validator.ts",
+    "modules/tasks/task.model.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/epics/epic.types.ts": [],
+  "modules/epics/epic.validator.ts": [],
+  "modules/github/github.model.ts": [
+    "modules/github/github.types.ts"
+  ],
+  "modules/github/github.service.ts": [
+    "modules/github/github.model.ts",
+    "modules/github/github.types.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/github/github.types.ts": [],
+  "modules/links/link.model.ts": [
+    "modules/links/link.types.ts"
+  ],
+  "modules/links/link.service.ts": [
+    "modules/links/link.model.ts",
+    "modules/links/link.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/links/link.types.ts": [],
+  "modules/links/link.validator.ts": [],
+  "modules/notifications/notification.model.ts": [
+    "modules/notifications/notification.types.ts"
+  ],
+  "modules/notifications/notification.service.ts": [
+    "modules/notifications/notification.model.ts",
+    "modules/notifications/notification.types.ts",
+    "modules/projects/project.model.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/notifications/notification.types.ts": [],
+  "modules/notifications/notification.validator.ts": [],
+  "modules/projects/project.model.ts": [],
+  "modules/projects/project.service.ts": [
+    "modules/projects/project.model.ts",
+    "modules/projects/project.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/middleware/role-guard.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/projects/project.types.ts": [],
+  "modules/projects/project.validator.ts": [],
+  "modules/sprints/sprint.model.ts": [
+    "modules/sprints/sprint.types.ts"
+  ],
+  "modules/sprints/sprint.service.ts": [
+    "modules/sprints/sprint.model.ts",
+    "modules/sprints/sprint.validator.ts",
+    "modules/tasks/task.model.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/sprints/sprint.types.ts": [],
+  "modules/sprints/sprint.validator.ts": [],
+  "modules/tasks/task.model.ts": [
+    "modules/tasks/task.types.ts"
+  ],
+  "modules/tasks/task.service.ts": [
+    "modules/ai/agents/priority-detection.agent.ts",
+    "modules/tasks/task.model.ts",
+    "modules/tasks/task.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/tasks/task.types.ts": [],
+  "modules/tasks/task.validator.ts": [],
+  "modules/users/user.model.ts": [
+    "shared/utils/constants.ts"
+  ],
+  "modules/users/user.service.ts": [
+    "modules/projects/project.model.ts",
+    "modules/users/user.model.ts",
+    "modules/users/user.validator.ts",
+    "shared/middleware/api-handler.ts",
+    "shared/utils/constants.ts"
+  ],
+  "modules/users/user.types.ts": [
+    "shared/utils/constants.ts"
+  ],
+  "modules/users/user.validator.ts": [
+    "shared/utils/constants.ts"
+  ],
+  "shared/database/connection.ts": [
+    "config/env.ts"
+  ],
+  "shared/lib/api-client.ts": [
+    "hooks/use-auth.ts"
+  ],
+  "shared/lib/encryption.ts": [
+    "config/env.ts"
+  ],
+  "shared/lib/tokens.ts": [
+    "config/env.ts",
+    "shared/utils/constants.ts"
+  ],
+  "shared/middleware/api-handler.ts": [
+    "config/env.ts",
+    "shared/database/connection.ts",
+    "shared/middleware/auth.ts",
+    "shared/middleware/rate-limiter.ts",
+    "shared/middleware/role-guard.ts",
+    "shared/middleware/validate.ts",
+    "shared/types/api.types.ts",
+    "shared/utils/api-response.ts"
+  ],
+  "shared/middleware/auth.ts": [
+    "shared/lib/tokens.ts",
+    "shared/utils/constants.ts"
+  ],
+  "shared/middleware/project-access.ts": [
+    "modules/projects/project.service.ts",
+    "shared/middleware/role-guard.ts"
+  ],
+  "shared/middleware/rate-limiter.ts": [],
+  "shared/middleware/role-guard.ts": [
+    "shared/middleware/auth.ts",
+    "shared/utils/constants.ts"
+  ],
+  "shared/middleware/validate.ts": [],
+  "shared/types/api.types.ts": [],
+  "shared/utils/api-response.ts": [
+    "shared/types/api.types.ts"
+  ],
+  "shared/utils/constants.ts": [],
+  "styles/theme.config.ts": [
+    "styles/themes/indigo.ts"
+  ],
+  "styles/themes/indigo.ts": []
+}
