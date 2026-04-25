@@ -12,10 +12,11 @@ export function parseIdToken(idToken: string): {
   const parts = idToken.split('.');
   if (parts.length !== 3) return {};
   const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+  const authClaims = payload['https://api.openai.com/auth'] ?? {};
   return {
     email: payload.email,
-    accountId: payload.chatgpt_account_id,
-    planType: payload.chatgpt_plan_type,
+    accountId: authClaims.chatgpt_account_id ?? payload.chatgpt_account_id,
+    planType: authClaims.chatgpt_plan_type ?? payload.chatgpt_plan_type,
   };
 }
 
@@ -119,16 +120,17 @@ export async function exchangeCodeForTokens(
   idToken?: string;
   expiresIn: number;
 }> {
+  const body = new URLSearchParams({
+    client_id: OPENAI_CONSTANTS.CLIENT_ID,
+    grant_type: 'authorization_code',
+    code: authorizationCode,
+    redirect_uri: 'https://auth.openai.com/deviceauth/callback',
+    code_verifier: codeVerifier,
+  });
   const res = await fetch(OPENAI_CONSTANTS.TOKEN_EXCHANGE_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      client_id: OPENAI_CONSTANTS.CLIENT_ID,
-      grant_type: 'authorization_code',
-      code: authorizationCode,
-      redirect_uri: 'https://auth.openai.com/deviceauth/callback',
-      code_verifier: codeVerifier,
-    }),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
   });
 
   if (!res.ok) {

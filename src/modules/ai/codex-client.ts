@@ -8,34 +8,58 @@ interface CodexRequest {
   model?: string;
 }
 
-/**
- * Wrapper for the ChatGPT Codex Responses API.
- * Bills against the user's ChatGPT subscription -- no separate API keys needed.
- */
+function sanitizeToAscii(text: string): string {
+  return text.replace(/[^\x20-\x7E\n\r\t]/g, '').replace(/\{\{.*?\}\}/g, '');
+}
+
+async function parseSSEStream(response: Response): Promise<string> {
+  const text = await response.text();
+  const lines = text.split('\n');
+  let result = '';
+
+  for (const line of lines) {
+    if (!line.startsWith('data: ')) continue;
+    const data = line.slice(6).trim();
+    if (data === '[DONE]') break;
+
+    try {
+      const parsed = JSON.parse(data);
+      if (parsed.type === 'response.output_text.delta' && parsed.delta) {
+        result += parsed.delta;
+      }
+    } catch {
+      // skip malformed lines
+    }
+  }
+
+  return result;
+}
+
 export const CodexClient = {
-  /**
-   * Send a prompt to Codex and return the text response.
-   * Uses non-streaming mode for simplicity in agent use cases.
-   */
   async complete(req: CodexRequest): Promise<string> {
+    if (!req.accountId) {
+      throw new Error('ChatGPT Account ID is required for Codex API calls');
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${req.accessToken}`,
+      'Accept': 'text/event-stream',
+      'Authorization': `Bearer ${req.accessToken}`,
+      'chatgpt-account-id': req.accountId,
     };
 
-    if (req.accountId) {
-      headers['ChatGPT-Account-ID'] = req.accountId;
-    }
+    const sanitizedInstructions = sanitizeToAscii(req.instructions);
+    const sanitizedInput = sanitizeToAscii(req.input);
 
     const res = await fetch(OPENAI_CONSTANTS.CODEX_API_ENDPOINT, {
       method: 'POST',
       headers,
       body: JSON.stringify({
         model: req.model ?? 'gpt-4o',
-        instructions: req.instructions,
-        input: req.input,
+        instructions: sanitizedInstructions,
+        input: [{ role: 'user', content: sanitizedInput }],
         store: false,
-        stream: false,
+        stream: true,
       }),
     });
 
@@ -45,33 +69,11 @@ export const CodexClient = {
       throw new Error(`Codex API failed (${res.status}): ${body.slice(0, 200)}`);
     }
 
-    const data = await res.json();
-    return extractTextFromResponse(data);
+    const result = await parseSSEStream(res);
+    if (!result) {
+      throw new Error('Codex API returned empty response');
+    }
+
+    return result;
   },
 };
-
-/**
- * Extract the text content from a Codex Responses API response.
- */
-function extractTextFromResponse(data: unknown): string {
-  const response = data as {
-    output?: Array<{
-      type: string;
-      content?: Array<{ type: string; text?: string }>;
-    }>;
-  };
-
-  if (!response.output) return '';
-
-  for (const item of response.output) {
-    if (item.type === 'message' && item.content) {
-      for (const block of item.content) {
-        if (block.type === 'output_text' && block.text) {
-          return block.text;
-        }
-      }
-    }
-  }
-
-  return '';
-}

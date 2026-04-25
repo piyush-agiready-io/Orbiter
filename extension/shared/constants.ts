@@ -1,4 +1,6 @@
-export const API_BASE_URL = 'http://localhost:3000/api/v1';
+export const API_BASE_URL = 'https://orbiteragiready.vercel.app/api/v1';
+
+export const PLATFORM_URL = 'https://orbiteragiready.vercel.app';
 
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'orbiter_access_token',
