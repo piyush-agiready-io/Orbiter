@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/shared/lib/api-client';
 import { Button } from '@/components/ui/button';
+import { SignOut } from '@phosphor-icons/react';
 import Avatar from 'boring-avatars';
 
 const profileSchema = z.object({
@@ -17,7 +19,8 @@ const profileSchema = z.object({
 type ProfileInput = z.infer<typeof profileSchema>;
 
 export default function SettingsPage() {
-  const { user, setAuth, accessToken } = useAuth();
+  const { user, setAuth, accessToken, clearAuth } = useAuth();
+  const router = useRouter();
   const [saved, setSaved] = useState(false);
   const [githubConnected, setGithubConnected] = useState(false);
   const [githubUsername, setGithubUsername] = useState<string | null>(null);
@@ -150,6 +153,21 @@ export default function SettingsPage() {
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="mt-6 rounded-lg border border-[var(--color-error)]/20 bg-surface p-6">
+        <h3 className="text-lg font-medium text-primary">Sign Out</h3>
+        <p className="mt-1 text-sm text-secondary">
+          Sign out of your Orbiter account on this device.
+        </p>
+        <Button
+          variant="destructive"
+          className="mt-4"
+          onClick={() => { clearAuth(); router.push('/login'); }}
+        >
+          <SignOut size={16} className="mr-1.5" />
+          Sign Out
+        </Button>
       </div>
     </div>
   );

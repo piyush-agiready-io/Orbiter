@@ -4,7 +4,7 @@ import { Timer, Play, CheckCircle, Plus } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSprints } from '@/hooks/queries/use-sprints';
+import { useSprints, useUpdateSprint } from '@/hooks/queries/use-sprints';
 import { format } from 'date-fns';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; style: string }> = {
@@ -31,6 +31,7 @@ interface SprintListProps {
 
 export function SprintList({ projectId, onSelect, onClose, onCreate }: SprintListProps) {
   const { data, isLoading } = useSprints(projectId);
+  const updateSprint = useUpdateSprint(projectId);
 
   if (isLoading) {
     return (
@@ -88,6 +89,19 @@ export function SprintList({ projectId, onSelect, onClose, onCreate }: SprintLis
                       {sprint.status}
                     </Badge>
                   </div>
+                  {sprint.status === 'planning' && (
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateSprint.mutate({ sprintId: sprint.id, data: { status: 'active' } });
+                      }}
+                      disabled={updateSprint.isPending}
+                    >
+                      <Play size={14} weight="fill" className="mr-1" />
+                      Start Sprint
+                    </Button>
+                  )}
                   {sprint.status === 'active' && (
                     <Button
                       size="sm"

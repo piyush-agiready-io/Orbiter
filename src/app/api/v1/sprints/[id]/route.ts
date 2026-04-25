@@ -16,6 +16,11 @@ export const PATCH = apiHandler({
   validate: { body: updateSprintSchema },
   handler: async (_req, ctx) => {
     const body = ctx.body as UpdateSprintInput;
+    if (body.status === 'active') {
+      const existing = await SprintService.getById(ctx.params.id);
+      const sprint = await SprintService.activate(ctx.params.id, existing.project.toString());
+      return { data: sprint.toJSON() };
+    }
     const sprint = await SprintService.update(ctx.params.id, body);
     return { data: sprint.toJSON() };
   },

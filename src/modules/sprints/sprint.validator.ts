@@ -14,6 +14,7 @@ export const updateSprintSchema = z.object({
   goal: z.string().max(500).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
+  status: z.enum(['planning', 'active']).optional(),
   retroNotes: z.string().max(5000).optional(),
 });
 
