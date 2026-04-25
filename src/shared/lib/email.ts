@@ -26,19 +26,25 @@ async function sendEmail(options: SendEmailOptions): Promise<boolean> {
     return false;
   }
 
-  const { error } = await client.emails.send({
-    from: FROM_EMAIL,
-    to: options.to,
-    subject: options.subject,
-    html: options.html,
-  });
+  try {
+    const { data: result, error } = await client.emails.send({
+      from: FROM_EMAIL,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    });
 
-  if (error) {
-    console.error('Email send failed:', error);
+    if (error) {
+      console.error('Email send failed:', JSON.stringify(error));
+      return false;
+    }
+
+    console.log('Email sent:', result?.id, 'to:', options.to);
+    return true;
+  } catch (err) {
+    console.error('Email send exception:', err);
     return false;
   }
-
-  return true;
 }
 
 function baseTemplate(content: string): string {
