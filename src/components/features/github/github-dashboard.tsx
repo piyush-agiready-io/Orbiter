@@ -43,6 +43,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { InfoTip } from '@/components/shared/info-tip';
+import { SyncProgress } from './sync-progress';
 
 interface GitHubDashboardProps {
   projectId: string;
@@ -79,6 +80,9 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedRepoToAdd, setSelectedRepoToAdd] = useState('');
   const [readmeRepo, setReadmeRepo] = useState<{ owner: string; repo: string } | null>(null);
+  const [syncRunning, setSyncRunning] = useState(false);
+  const [syncComplete, setSyncComplete] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ commitCount?: number; prCount?: number } | undefined>();
 
   const project = projectData as { githubRepos?: GitHubRepo[] } | undefined;
   const githubRepos = project?.githubRepos ?? [];
@@ -130,9 +134,21 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   };
 
   const handleSync = () => {
+    setSyncRunning(true);
+    setSyncComplete(false);
+    setSyncResult(undefined);
     triggerSync.mutate(undefined, {
-      onSuccess: () => toast.success('GitHub sync complete'),
-      onError: () => toast.error('Sync failed — check connection'),
+      onSuccess: (result) => {
+        const r = result as { commitCount?: number; prCount?: number } | undefined;
+        setSyncResult(r ?? undefined);
+        setSyncComplete(true);
+        setSyncRunning(false);
+        setTimeout(() => { setSyncComplete(false); setSyncRunning(false); }, 4000);
+      },
+      onError: () => {
+        setSyncRunning(false);
+        toast.error('Sync failed — check connection');
+      },
     });
   };
 
@@ -147,11 +163,7 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
         setSelectedRepoToAdd('');
         toast.success(`Added ${owner}/${repo}`);
         if (isFirstRepo) {
-          setTimeout(() => {
-            triggerSync.mutate(undefined, {
-              onSuccess: () => toast.success('Initial sync complete'),
-            });
-          }, 500);
+          setTimeout(() => handleSync(), 500);
         }
       },
     });
@@ -230,6 +242,13 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
         <div className="mb-4 flex items-center gap-2 rounded-md bg-[var(--color-success-muted)] px-3 py-2">
           <CheckCircle size={16} weight="fill" className="text-[var(--color-success)]" />
           <p className="text-sm text-[var(--color-success)]">GitHub connected. Select a repository below to start syncing.</p>
+        </div>
+      )}
+
+      {/* Sync Progress */}
+      {(syncRunning || syncComplete) && (
+        <div className="mb-6">
+          <SyncProgress isRunning={syncRunning} isComplete={syncComplete} result={syncResult} />
         </div>
       )}
 
