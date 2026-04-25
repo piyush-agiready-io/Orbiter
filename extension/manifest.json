@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Orbiter Bug Capture",
+  "version": "1.0.0",
+  "description": "One-click bug capture for Orbiter project management",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs",
+    "debugger",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://*.orbiter.io/*",
+    "https://*.r2.cloudflarestorage.com/*"
+  ],
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

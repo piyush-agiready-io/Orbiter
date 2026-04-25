@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg-page: #FAFAFA;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-subtle: #F4F4F5;
+  --color-bg-muted: #EDEDEF;
+
+  --color-text-primary: #1C1C22;
+  --color-text-secondary: #5C5C6B;
+  --color-text-muted: #8B8B9A;
+  --color-text-disabled: #B4B4C0;
+  --color-text-inverse: #FAFAFA;
+
+  --color-border-subtle: #EBEBEF;
+  --color-border-default: #DDDDE3;
+  --color-border-strong: #C2C2CC;
+
+  --color-accent: #5B5FC7;
+  --color-accent-hover: #4E52B0;
+  --color-accent-muted: #E8E9F5;
+  --color-accent-text: #4248A6;
+
+  --color-success: #2E7D57;
+  --color-success-muted: #E6F4ED;
+  --color-warning: #B5850B;
+  --color-warning-muted: #FEF5E0;
+  --color-error: #C93B3B;
+  --color-error-muted: #FCE9E9;
+  --color-info: #3178B9;
+  --color-info-muted: #E5F0FA;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+@theme {
+  --color-surface: var(--color-bg-surface);
+  --color-page: var(--color-bg-page);
+  --color-elevated: var(--color-bg-elevated);
+  --color-subtle: var(--color-bg-subtle);
+  --color-muted: var(--color-bg-muted);
+  --color-primary: var(--color-text-primary);
+  --color-secondary: var(--color-text-secondary);
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-muted: var(--color-accent-muted);
+  --color-error: var(--color-error);
+  --color-success: var(--color-success);
+}
+
+html {
+  width: 380px;
+  min-height: 480px;
+}
+
+body {
+  width: 380px;
+  min-height: 480px;
+  max-height: 600px;
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-y: auto;
+}
+
+#root {
+  min-height: 480px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
