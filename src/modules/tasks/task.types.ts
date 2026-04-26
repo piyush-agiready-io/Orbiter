@@ -12,6 +12,7 @@ export interface ITask {
   prioritySource: PrioritySource;
   status: TaskStatus;
   project: string;
+  epic?: string;
   sprint?: string;
   assignees: string[];
   tags: string[];

@@ -6,6 +6,7 @@ export const NOTIFICATION_TYPES = [
   'invite',
   'priority_changed',
   'client_task_done',
+  'task_completed',
   'github_digest',
 ] as const;
 

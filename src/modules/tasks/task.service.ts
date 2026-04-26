@@ -40,7 +40,7 @@ async function notifyAssignees(assigneeIds: string[], taskTitle: string, project
 
 export const TaskService = {
   async create(projectId: string, data: CreateTaskInput, userId?: string) {
-    const { sprintId, assigneeIds, ...rest } = data;
+    const { epicId, sprintId, assigneeIds, ...rest } = data;
     const maxOrder = await Task.findOne({ project: projectId, status: rest.status ?? 'backlog' })
       .sort({ order: -1 })
       .select('order')
@@ -49,6 +49,7 @@ export const TaskService = {
     const task = await Task.create({
       ...rest,
       project: projectId,
+      epic: epicId || undefined,
       sprint: sprintId || undefined,
       assignees: assigneeIds ?? [],
       order: (maxOrder?.order ?? -1) + 1,
@@ -118,8 +119,9 @@ export const TaskService = {
   },
 
   async update(id: string, data: UpdateTaskInput) {
-    const { sprintId, assigneeIds, ...rest } = data;
+    const { epicId, sprintId, assigneeIds, ...rest } = data;
     const updateData: Record<string, unknown> = { ...rest };
+    if (epicId !== undefined) updateData.epic = epicId;
     if (sprintId !== undefined) updateData.sprint = sprintId;
     if (assigneeIds !== undefined) updateData.assignees = assigneeIds;
 
@@ -142,6 +144,42 @@ export const TaskService = {
       { returnDocument: 'after', runValidators: true },
     );
     if (!task) throw new NotFoundError('Task');
+
+    if (data.status === 'done' && task.clientVisible) {
+      try {
+        const { Project } = await import('@/modules/projects/project.model');
+        const { User } = await import('@/modules/users/user.model');
+        const { NotificationService } = await import('@/modules/notifications/notification.service');
+        const { sendTaskCompletedEmail } = await import('@/shared/lib/email');
+        const { env } = await import('@/config/env');
+
+        const project = await Project.findById(task.project).select('name clients').lean();
+        if (project && project.clients?.length) {
+          const clients = await User.find({ _id: { $in: project.clients } })
+            .select('email notificationPreferences')
+            .lean();
+          const link = `/projects/${String(task.project)}/board`;
+
+          for (const client of clients) {
+            NotificationService.notify(
+              String(client._id), 'task_completed',
+              'Task completed',
+              task.title,
+              link,
+            ).catch(() => {});
+
+            const pref = client.notificationPreferences?.emailDigest ?? 'immediate';
+            if (pref === 'immediate') {
+              sendTaskCompletedEmail(
+                client.email, task.title, project.name,
+                `${env.NEXT_PUBLIC_APP_URL}${link}`,
+              ).catch(() => {});
+            }
+          }
+        }
+      } catch {}
+    }
+
     return task;
   },
 
@@ -151,6 +189,7 @@ export const TaskService = {
     if (update.status) updateData.status = update.status;
     if (update.priority) updateData.priority = update.priority;
     if (update.assigneeIds !== undefined) updateData.assignees = update.assigneeIds;
+    if (update.epicId !== undefined) updateData.epic = update.epicId;
     if (update.sprintId !== undefined) updateData.sprint = update.sprintId;
 
     return Task.updateMany(

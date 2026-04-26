@@ -21,6 +21,9 @@ export interface UserDocument extends Document {
   resetToken?: string;
   resetExpiresAt?: Date;
   lastLoginAt?: Date;
+  notificationPreferences: {
+    emailDigest: 'immediate' | 'daily' | 'none';
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -86,6 +89,13 @@ const userSchema = new Schema<UserDocument>(
     },
     lastLoginAt: {
       type: Date,
+    },
+    notificationPreferences: {
+      emailDigest: {
+        type: String,
+        enum: ['immediate', 'daily', 'none'],
+        default: 'immediate',
+      },
     },
   },
   {

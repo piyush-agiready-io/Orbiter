@@ -8,6 +8,7 @@ export const createTaskSchema = z.object({
   type: z.enum(['feature', 'chore', 'improvement']).default('feature'),
   priority: z.enum(['P0', 'P1', 'P2', 'P3']).default('P2'),
   status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']).default('backlog'),
+  epicId: objectId.optional(),
   sprintId: objectId.optional(),
   assigneeIds: z.array(objectId).default([]),
   tags: z.array(z.string().trim()).default([]),
@@ -20,6 +21,7 @@ export const updateTaskSchema = z.object({
   type: z.enum(['feature', 'chore', 'improvement']).optional(),
   priority: z.enum(['P0', 'P1', 'P2', 'P3']).optional(),
   status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']).optional(),
+  epicId: objectId.nullable().optional(),
   sprintId: objectId.nullable().optional(),
   assigneeIds: z.array(objectId).optional(),
   tags: z.array(z.string().trim()).optional(),
@@ -50,6 +52,7 @@ export const bulkUpdateSchema = z.object({
     status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']).optional(),
     priority: z.enum(['P0', 'P1', 'P2', 'P3']).optional(),
     assigneeIds: z.array(objectId).optional(),
+    epicId: objectId.nullable().optional(),
     sprintId: objectId.nullable().optional(),
   }),
 });

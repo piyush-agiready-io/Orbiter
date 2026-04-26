@@ -1,28 +1,10 @@
 import { EnvVariable } from '@/modules/env-variables/env-variable.model';
-import { AuditLog } from '@/modules/audit-logs/audit-log.model';
+import { AuditLogService } from '@/modules/audit-logs/audit-log.service';
 import { encrypt, decrypt } from '@/shared/lib/encryption';
 import { NotFoundError, ConflictError } from '@/shared/middleware/api-handler';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import type { CreateEnvVariableInput, UpdateEnvVariableInput } from './env-variable.validator';
-import type { AuditAction } from '@/modules/audit-logs/audit-log.types';
-
-async function createAuditEntry(params: {
-  projectId: string;
-  userId: string;
-  action: AuditAction;
-  targetKey: string;
-  environment: string;
-  ipAddress?: string;
-}) {
-  await AuditLog.create({
-    project: params.projectId,
-    userId: params.userId,
-    action: params.action,
-    targetKey: params.targetKey,
-    environment: params.environment,
-    ipAddress: params.ipAddress,
-  });
-}
+import type { Environment } from '@/modules/audit-logs/audit-log.types';
 
 export const EnvVariableService = {
   async create(
@@ -52,7 +34,7 @@ export const EnvVariableService = {
       project: projectId,
     });
 
-    await createAuditEntry({
+    await AuditLogService.create({
       projectId,
       userId,
       action: 'env_create',
@@ -97,7 +79,7 @@ export const EnvVariableService = {
 
     const decryptedValue = decrypt(envVar.value, envVar.iv, envVar.authTag);
 
-    await createAuditEntry({
+    await AuditLogService.create({
       projectId: envVar.project.toString(),
       userId,
       action: 'env_reveal',
@@ -142,7 +124,7 @@ export const EnvVariableService = {
       { returnDocument: 'after', runValidators: true },
     );
 
-    await createAuditEntry({
+    await AuditLogService.create({
       projectId: envVar.project.toString(),
       userId,
       action: 'env_update',
@@ -162,7 +144,7 @@ export const EnvVariableService = {
 
     await EnvVariable.findByIdAndDelete(id);
 
-    await createAuditEntry({
+    await AuditLogService.create({
       projectId: envVar.project.toString(),
       userId,
       action: 'env_delete',
@@ -174,7 +156,7 @@ export const EnvVariableService = {
     return envVar;
   },
 
-  async export(projectId: string, environment: string, userId: string, ipAddress?: string) {
+  async export(projectId: string, environment: Environment, userId: string, ipAddress?: string) {
     const envVars = await EnvVariable.find({
       project: projectId,
       environment,
@@ -185,7 +167,7 @@ export const EnvVariableService = {
       return `${ev.key}=${decrypted}`;
     });
 
-    await createAuditEntry({
+    await AuditLogService.create({
       projectId,
       userId,
       action: 'env_export',
@@ -201,21 +183,6 @@ export const EnvVariableService = {
     projectId: string,
     query: { page?: number; limit?: number },
   ) {
-    const page = query.page ?? PAGINATION_DEFAULTS.PAGE;
-    const limit = query.limit ?? PAGINATION_DEFAULTS.LIMIT;
-    const skip = (page - 1) * limit;
-
-    const filter = { project: projectId };
-
-    const [logs, total] = await Promise.all([
-      AuditLog.find(filter)
-        .populate('userId', 'name email')
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 }),
-      AuditLog.countDocuments(filter),
-    ]);
-
-    return { logs, page, limit, total };
+    return AuditLogService.list(projectId, query);
   },
 };
