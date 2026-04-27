@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Avatar from 'boring-avatars';
 import { X } from '@phosphor-icons/react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useCreateTask } from '@/hooks/queries/use-tasks';
+import { useCreateTask, useUpdateTask } from '@/hooks/queries/use-tasks';
 import { useSprints } from '@/hooks/queries/use-sprints';
 import { useEpics } from '@/hooks/queries/use-epics';
 import { useUsers } from '@/hooks/queries/use-users';
@@ -56,6 +57,7 @@ export function TaskForm({
   defaultSprintId,
 }: TaskFormProps) {
   const createTask = useCreateTask(projectId);
+  const updateTask = useUpdateTask(projectId);
   const { data: sprintsData } = useSprints(projectId);
   const { data: epicsData } = useEpics(projectId);
   const { data: usersData } = useUsers();
@@ -97,19 +99,52 @@ export function TaskForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultStatus, defaultSprintId]);
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     const finalSprintId = defaultSprintId ?? sprintId;
-    createTask.mutate(
-      { ...values, sprintId: finalSprintId, assigneeIds: selectedAssignees },
-      {
-        onSuccess: () => {
-          form.reset();
-          setSelectedAssignees([]);
-          setSprintId(undefined);
-          onClose();
-        },
-      },
-    );
+    try {
+      const created = (await createTask.mutateAsync({
+        ...values,
+        sprintId: finalSprintId,
+        assigneeIds: selectedAssignees,
+      })) as {
+        id: string;
+        sprint?: string | { id?: string; _id?: string; name?: string } | null;
+      };
+
+      // Verify the sprint actually landed on the new task. If not (any
+      // silent serialization quirk between client and DB), force-set it
+      // with an update before closing the dialog.
+      if (finalSprintId) {
+        const persisted = created.sprint;
+        const persistedId =
+          typeof persisted === 'string'
+            ? persisted
+            : persisted && typeof persisted === 'object'
+              ? persisted.id ?? persisted._id ?? null
+              : null;
+
+        if (persistedId !== finalSprintId) {
+          await updateTask.mutateAsync({
+            taskId: created.id,
+            data: { sprintId: finalSprintId },
+          });
+        }
+      }
+
+      const sprintName = finalSprintId
+        ? sprintsData?.sprints?.find((s) => s.id === finalSprintId)?.name
+        : null;
+      toast.success(
+        sprintName ? `Task added to “${sprintName}”` : 'Task created',
+      );
+
+      form.reset();
+      setSelectedAssignees([]);
+      setSprintId(undefined);
+      onClose();
+    } catch {
+      // Mutation cache surfaces an error toast; nothing else to do here.
+    }
   };
 
   const toggleAssignee = (userId: string) => {

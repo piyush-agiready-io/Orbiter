@@ -74,6 +74,19 @@ export const TaskService = {
       order: (maxOrder?.order ?? -1) + 1,
     });
 
+    // Defensive verify-and-fix: if a sprintId was requested but the
+    // saved document doesn't carry it, force-set it with a follow-up
+    // updateOne. Tasks that "show on the board but not in the sprint"
+    // were almost certainly missing this field at the DB level — this
+    // closes off whatever silent path was dropping it.
+    if (sprintId && !task.sprint) {
+      console.warn(
+        `[TaskService.create] sprint missing after create; force-setting sprint=${sprintId} on task=${task._id}`,
+      );
+      await Task.updateOne({ _id: task._id }, { $set: { sprint: sprintId } });
+      task.sprint = sprintId as unknown as typeof task.sprint;
+    }
+
     if (userId && task.prioritySource !== 'manual') {
       PriorityDetectionAgent.classify(userId, task.title, task.description)
         .then(async ({ priority, source }) => {
@@ -88,6 +101,10 @@ export const TaskService = {
 
     if (task.epic) recalcEpicsAffected(String(task.epic));
 
+    // Populate sprint so the API response carries { id, name } — the
+    // client uses this both for an immediate optimistic toast ("Added
+    // to <sprint>") and to update its cache without a second fetch.
+    await task.populate('sprint', 'name');
     return task;
   },
 
