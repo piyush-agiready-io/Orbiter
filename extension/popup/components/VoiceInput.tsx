@@ -25,9 +25,15 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsPermission, setNeedsPermission] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+
+  function openPermissionPage() {
+    const url = chrome.runtime.getURL('popup/mic-permission.html');
+    chrome.tabs.create({ url });
+  }
 
   const cleanup = useCallback(() => {
     if (streamRef.current) {
@@ -90,6 +96,7 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
 
   const startRecording = useCallback(async () => {
     setError(null);
+    setNeedsPermission(false);
     chunksRef.current = [];
 
     let stream: MediaStream;
@@ -99,7 +106,12 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === 'NotAllowedError') {
-        setError('Microphone access denied');
+        // Popup contexts can't show the mic permission prompt directly.
+        // Surface a "Grant access" button that opens an extension page
+        // where the prompt can fire; granting it persists for the
+        // chrome-extension://<id> origin and the popup will work next time.
+        setNeedsPermission(true);
+        setError('Microphone access not allowed');
       } else {
         setError('Could not access microphone');
       }
@@ -185,7 +197,24 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
         </span>
       )}
 
-      {error && !isRecording && !isTranscribing && (
+      {needsPermission && !isRecording && !isTranscribing && (
+        <button
+          type="button"
+          onClick={openPermissionPage}
+          className="text-xs px-2 py-1 rounded transition-colors"
+          style={{
+            background: 'var(--color-accent)',
+            color: 'var(--color-text-inverse)',
+            borderRadius: 'var(--radius-sm)',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          Grant access
+        </button>
+      )}
+
+      {error && !needsPermission && !isRecording && !isTranscribing && (
         <span
           className="text-xs truncate max-w-[180px]"
           style={{ color: 'var(--color-error)' }}
