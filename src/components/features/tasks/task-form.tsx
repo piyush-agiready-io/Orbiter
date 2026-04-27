@@ -209,9 +209,11 @@ export function TaskForm({
               ) : (
                 <Select
                   value={sprintId ?? '__none__'}
-                  onValueChange={(v) =>
-                    setSprintId(v === '__none__' ? undefined : v)
-                  }
+                  onValueChange={(v) => {
+                    const next: string | undefined =
+                      !v || v === '__none__' ? undefined : (v as string);
+                    setSprintId(next);
+                  }}
                 >
                   <SelectTrigger className="mt-1.5">
                     <SelectValue placeholder="None" />

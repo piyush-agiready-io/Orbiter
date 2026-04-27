@@ -6,6 +6,12 @@ import Mention from '@tiptap/extension-mention';
 import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   TextB,
   TextItalic,
   TextStrikethrough,
@@ -29,44 +35,74 @@ interface DocEditorProps {
   mentionUsers?: { id: string; name: string }[];
 }
 
+interface ToolbarButton {
+  type: 'button';
+  icon: React.ReactNode;
+  label: string;
+  action: () => void;
+  isActive: boolean;
+}
+
+interface ToolbarDivider {
+  type: 'divider';
+}
+
+type ToolbarItem = ToolbarButton | ToolbarDivider;
+
 function MenuBar({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
   if (!editor) return null;
 
-  const items = [
-    { icon: <TextB size={16} weight="bold" />, action: () => editor.chain().focus().toggleBold().run(), isActive: editor.isActive('bold') },
-    { icon: <TextItalic size={16} />, action: () => editor.chain().focus().toggleItalic().run(), isActive: editor.isActive('italic') },
-    { icon: <TextStrikethrough size={16} />, action: () => editor.chain().focus().toggleStrike().run(), isActive: editor.isActive('strike') },
-    { type: 'divider' as const },
-    { icon: <TextHOne size={16} />, action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), isActive: editor.isActive('heading', { level: 1 }) },
-    { icon: <TextHTwo size={16} />, action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), isActive: editor.isActive('heading', { level: 2 }) },
-    { icon: <TextHThree size={16} />, action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), isActive: editor.isActive('heading', { level: 3 }) },
-    { type: 'divider' as const },
-    { icon: <ListBullets size={16} />, action: () => editor.chain().focus().toggleBulletList().run(), isActive: editor.isActive('bulletList') },
-    { icon: <ListNumbers size={16} />, action: () => editor.chain().focus().toggleOrderedList().run(), isActive: editor.isActive('orderedList') },
-    { type: 'divider' as const },
-    { icon: <Code size={16} />, action: () => editor.chain().focus().toggleCode().run(), isActive: editor.isActive('code') },
-    { icon: <CodeBlock size={16} />, action: () => editor.chain().focus().toggleCodeBlock().run(), isActive: editor.isActive('codeBlock') },
-    { icon: <Quotes size={16} />, action: () => editor.chain().focus().toggleBlockquote().run(), isActive: editor.isActive('blockquote') },
-    { icon: <Minus size={16} />, action: () => editor.chain().focus().setHorizontalRule().run(), isActive: false },
-    { type: 'divider' as const },
-    { icon: <ArrowCounterClockwise size={16} />, action: () => editor.chain().focus().undo().run(), isActive: false },
-    { icon: <ArrowClockwise size={16} />, action: () => editor.chain().focus().redo().run(), isActive: false },
+  const items: ToolbarItem[] = [
+    { type: 'button', icon: <TextB size={16} weight="bold" />, label: 'Bold (Ctrl+B)', action: () => editor.chain().focus().toggleBold().run(), isActive: editor.isActive('bold') },
+    { type: 'button', icon: <TextItalic size={16} />, label: 'Italic (Ctrl+I)', action: () => editor.chain().focus().toggleItalic().run(), isActive: editor.isActive('italic') },
+    { type: 'button', icon: <TextStrikethrough size={16} />, label: 'Strikethrough', action: () => editor.chain().focus().toggleStrike().run(), isActive: editor.isActive('strike') },
+    { type: 'divider' },
+    { type: 'button', icon: <TextHOne size={16} />, label: 'Heading 1', action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), isActive: editor.isActive('heading', { level: 1 }) },
+    { type: 'button', icon: <TextHTwo size={16} />, label: 'Heading 2', action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), isActive: editor.isActive('heading', { level: 2 }) },
+    { type: 'button', icon: <TextHThree size={16} />, label: 'Heading 3', action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), isActive: editor.isActive('heading', { level: 3 }) },
+    { type: 'divider' },
+    { type: 'button', icon: <ListBullets size={16} />, label: 'Bullet list', action: () => editor.chain().focus().toggleBulletList().run(), isActive: editor.isActive('bulletList') },
+    { type: 'button', icon: <ListNumbers size={16} />, label: 'Numbered list', action: () => editor.chain().focus().toggleOrderedList().run(), isActive: editor.isActive('orderedList') },
+    { type: 'divider' },
+    { type: 'button', icon: <Code size={16} />, label: 'Inline code', action: () => editor.chain().focus().toggleCode().run(), isActive: editor.isActive('code') },
+    { type: 'button', icon: <CodeBlock size={16} />, label: 'Code block', action: () => editor.chain().focus().toggleCodeBlock().run(), isActive: editor.isActive('codeBlock') },
+    { type: 'button', icon: <Quotes size={16} />, label: 'Quote', action: () => editor.chain().focus().toggleBlockquote().run(), isActive: editor.isActive('blockquote') },
+    { type: 'button', icon: <Minus size={16} />, label: 'Horizontal rule', action: () => editor.chain().focus().setHorizontalRule().run(), isActive: false },
+    { type: 'divider' },
+    { type: 'button', icon: <ArrowCounterClockwise size={16} />, label: 'Undo (Ctrl+Z)', action: () => editor.chain().focus().undo().run(), isActive: false },
+    { type: 'button', icon: <ArrowClockwise size={16} />, label: 'Redo (Ctrl+Shift+Z)', action: () => editor.chain().focus().redo().run(), isActive: false },
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-default px-3 py-1.5">
-      {items.map((item, i) => {
-        if ('type' in item && item.type === 'divider') {
-          return <div key={`divider-${i}`} className="mx-1 h-5 w-px bg-[var(--color-border-subtle)]" />;
-        }
-        const btn = item as { icon: React.ReactNode; action: () => void; isActive: boolean };
-        return (
-          <Button key={i} variant="ghost" size="icon-xs" onClick={btn.action} className={btn.isActive ? 'bg-subtle text-primary' : 'text-secondary'}>
-            {btn.icon}
-          </Button>
-        );
-      })}
-    </div>
+    <TooltipProvider delay={300}>
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-default px-3 py-1.5">
+        {items.map((item, i) => {
+          if (item.type === 'divider') {
+            return <div key={`divider-${i}`} className="mx-1 h-5 w-px bg-[var(--color-border-subtle)]" />;
+          }
+          return (
+            <Tooltip key={i}>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={item.action}
+                    className={item.isActive ? 'bg-subtle text-primary' : 'text-secondary'}
+                    aria-label={item.label}
+                  >
+                    {item.icon}
+                  </Button>
+                }
+              />
+              <TooltipContent>{item.label}</TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -82,21 +118,26 @@ function createMentionSuggestion(users: { id: string; name: string }[]): any {
       let popup: HTMLDivElement | null = null;
       let selectedIndex = 0;
       let items: { id: string; name: string }[] = [];
-      let commandFn: ((item: { id: string; name: string }) => void) | null = null;
+      let commandFn: ((item: { id: string; label: string }) => void) | null = null;
+
+      function selectItem(index: number) {
+        const item = items[index];
+        if (commandFn && item) commandFn({ id: item.id, label: item.name });
+      }
 
       function updatePopup() {
         if (!popup) return;
         popup.innerHTML = items
           .map(
             (item, i) =>
-              `<button class="mention-item ${i === selectedIndex ? 'is-selected' : ''}" data-index="${i}">${item.name}</button>`,
+              `<button type="button" class="mention-item ${i === selectedIndex ? 'is-selected' : ''}" data-index="${i}">${item.name}</button>`,
           )
           .join('');
         popup.querySelectorAll('.mention-item').forEach((btn) => {
           btn.addEventListener('mousedown', (e) => {
             e.preventDefault();
             const index = parseInt((btn as HTMLElement).dataset.index ?? '0');
-            if (commandFn && items[index]) commandFn(items[index]);
+            selectItem(index);
           });
         });
       }
@@ -130,7 +171,7 @@ function createMentionSuggestion(users: { id: string; name: string }[]): any {
         onKeyDown: (props: any) => {
           if (props.event.key === 'ArrowDown') { selectedIndex = (selectedIndex + 1) % items.length; updatePopup(); return true; }
           if (props.event.key === 'ArrowUp') { selectedIndex = (selectedIndex - 1 + items.length) % items.length; updatePopup(); return true; }
-          if (props.event.key === 'Enter') { if (commandFn && items[selectedIndex]) commandFn(items[selectedIndex]); return true; }
+          if (props.event.key === 'Enter') { selectItem(selectedIndex); return true; }
           if (props.event.key === 'Escape') { popup?.remove(); popup = null; return true; }
           return false;
         },
@@ -142,6 +183,11 @@ function createMentionSuggestion(users: { id: string; name: string }[]): any {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 export function DocEditor({ content, onChange, editable = true, mentionUsers = [] }: DocEditorProps) {
+  // Track whether we've already seeded the editor with the initial server content.
+  // Without this, a setContent call during typing (triggered by save → refetch)
+  // wipes the user's in-flight edits.
+  const seededRef = useRef(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -149,6 +195,7 @@ export function DocEditor({ content, onChange, editable = true, mentionUsers = [
         HTMLAttributes: {
           class: 'mention',
         },
+        renderText: ({ node }) => `@${node.attrs.label ?? node.attrs.id}`,
         suggestion: createMentionSuggestion(mentionUsers),
       }),
     ],
@@ -168,13 +215,14 @@ export function DocEditor({ content, onChange, editable = true, mentionUsers = [
     },
   });
 
+  // Seed the editor once when initial content arrives (async from server).
+  // Subsequent prop changes are ignored — the editor is the source of truth
+  // while it is mounted.
   useEffect(() => {
-    if (editor && content && Object.keys(content).length > 0) {
-      const currentJSON = JSON.stringify(editor.getJSON());
-      const newJSON = JSON.stringify(content);
-      if (currentJSON !== newJSON) {
-        editor.commands.setContent(content);
-      }
+    if (!editor || seededRef.current) return;
+    if (content && Object.keys(content).length > 0) {
+      editor.commands.setContent(content);
+      seededRef.current = true;
     }
   }, [editor, content]);
 
