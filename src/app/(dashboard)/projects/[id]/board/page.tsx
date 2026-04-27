@@ -8,7 +8,9 @@ import { TaskForm } from '@/components/features/tasks/task-form';
 import { TaskDetailPanel } from '@/components/features/tasks/task-detail-panel';
 import { ActiveSprintBanner } from '@/components/features/sprints/active-sprint-banner';
 import { useTasks } from '@/hooks/queries/use-tasks';
+import { useSprints } from '@/hooks/queries/use-sprints';
 import type { ITask } from '@/modules/tasks/task.types';
+import type { ISprint } from '@/modules/sprints/sprint.types';
 
 export default function BoardPage() {
   const params = useParams<{ id: string }>();
@@ -21,13 +23,28 @@ export default function BoardPage() {
   const { data, isLoading } = useTasks(projectId, filters as Record<string, string>);
   const tasks = data?.tasks ?? [];
 
+  const { data: sprintsData } = useSprints(projectId);
+  const sprints = ((sprintsData?.sprints ?? []) as ISprint[])
+    .filter((s) => s.status !== 'closed')
+    .map((s) => ({ id: s.id, name: s.name, status: s.status }));
+
   return (
     <div className="flex h-full flex-col p-0">
-      <ActiveSprintBanner projectId={projectId} />
+      <ActiveSprintBanner
+        projectId={projectId}
+        onActivate={(sprintId) => {
+          const next = { ...filters };
+          if (sprintId) next.sprint = sprintId;
+          else delete next.sprint;
+          setFilters(next);
+        }}
+        active={filters.sprint}
+      />
       <KanbanFilterBar
         filters={filters}
         onFilterChange={setFilters}
         onNewTask={() => setIsTaskFormOpen(true)}
+        sprints={sprints}
       />
 
       <div className="flex flex-1 min-h-0">
@@ -54,6 +71,7 @@ export default function BoardPage() {
         projectId={projectId}
         open={isTaskFormOpen}
         onClose={() => setIsTaskFormOpen(false)}
+        defaultSprintId={filters.sprint}
       />
     </div>
   );

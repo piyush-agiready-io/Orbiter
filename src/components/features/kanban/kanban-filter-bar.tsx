@@ -16,6 +16,7 @@ export interface TaskFilters {
   search?: string;
   priority?: string;
   assignee?: string;
+  sprint?: string;
 }
 
 interface KanbanFilterBarProps {
@@ -23,6 +24,7 @@ interface KanbanFilterBarProps {
   onFilterChange: (filters: TaskFilters) => void;
   onNewTask: () => void;
   assignees?: { id: string; name: string }[];
+  sprints?: { id: string; name: string; status: string }[];
 }
 
 export function KanbanFilterBar({
@@ -30,6 +32,7 @@ export function KanbanFilterBar({
   onFilterChange,
   onNewTask,
   assignees = [],
+  sprints = [],
 }: KanbanFilterBarProps) {
   const updateFilter = (key: keyof TaskFilters, value: string) => {
     const next = { ...filters };
@@ -95,6 +98,26 @@ export function KanbanFilterBar({
           ))}
         </SelectContent>
       </Select>
+
+      {/* Sprint dropdown */}
+      {sprints.length > 0 && (
+        <Select
+          value={filters.sprint ?? 'all'}
+          onValueChange={(v) => updateFilter('sprint', v ?? 'all')}
+        >
+          <SelectTrigger size="sm">
+            <SelectValue placeholder="Sprint" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sprints</SelectItem>
+            {sprints.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name} {s.status === 'active' ? '(active)' : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />

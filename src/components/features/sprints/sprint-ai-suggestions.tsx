@@ -61,8 +61,8 @@ export function SprintAiSuggestions({ projectId }: SprintAiSuggestionsProps) {
       {
         taskId: suggestion.taskId,
         data: {
-          sprint: suggestion.sprintId,
-          assignees: [suggestion.assigneeId],
+          sprintId: suggestion.sprintId,
+          assigneeIds: [suggestion.assigneeId],
         },
       },
       {
