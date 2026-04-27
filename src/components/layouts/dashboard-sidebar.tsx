@@ -65,6 +65,10 @@ export function DashboardSidebar({ mobileOpen = false, onClose }: SidebarProps) 
       {/* Search trigger */}
       <button
         type="button"
+        onClick={() => {
+          window.dispatchEvent(new Event('orbiter:open-command-palette'));
+          handleNavClick();
+        }}
         className="mt-3 flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm text-secondary transition-colors duration-[120ms] ease-[ease] hover:bg-subtle hover:text-primary"
       >
         <MagnifyingGlass size={16} className="shrink-0" />

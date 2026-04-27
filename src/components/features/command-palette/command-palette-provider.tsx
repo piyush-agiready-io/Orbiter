@@ -75,7 +75,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     })),
   ];
 
-  // Global keyboard listener
+  // Global keyboard listener + custom-event opener (clicked from sidebar)
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -83,9 +83,16 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
         setIsOpen((prev) => !prev);
       }
     }
+    function handleOpen() {
+      setIsOpen(true);
+    }
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('orbiter:open-command-palette', handleOpen);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('orbiter:open-command-palette', handleOpen);
+    };
   }, []);
 
   const handleClose = useCallback(() => setIsOpen(false), []);
