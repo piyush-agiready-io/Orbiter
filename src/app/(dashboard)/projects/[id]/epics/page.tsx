@@ -160,10 +160,10 @@ export default function EpicsPage({ params }: { params: Promise<{ id: string }> 
                   {epic.title}
                 </h3>
                 <DropdownMenu>
-                  <DropdownMenuTrigger>
-                    <button className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted opacity-0 transition-opacity hover:bg-subtle hover:text-primary group-hover:opacity-100">
-                      <DotsThree size={16} weight="bold" />
-                    </button>
+                  <DropdownMenuTrigger
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted opacity-0 transition-opacity hover:bg-subtle hover:text-primary group-hover:opacity-100"
+                  >
+                    <DotsThree size={16} weight="bold" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setEditingEpic(epic)}>

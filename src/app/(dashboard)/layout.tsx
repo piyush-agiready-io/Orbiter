@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { AuthProvider } from '@/components/providers/auth-provider';
+import { CommandPaletteProvider } from '@/components/features/command-palette/command-palette-provider';
 import { DashboardSidebar } from '@/components/layouts/dashboard-sidebar';
 import { Topbar } from '@/components/layouts/topbar';
 import { DashboardKeyboardShortcuts } from '@/components/layouts/dashboard-keyboard-shortcuts';
@@ -13,23 +14,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <AuthProvider>
-      <div className="flex h-screen">
-        {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/40 md:hidden"
-            onClick={closeSidebar}
-          />
-        )}
+      <CommandPaletteProvider>
+        <div className="flex h-screen">
+          {/* Mobile overlay */}
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/40 md:hidden"
+              onClick={closeSidebar}
+            />
+          )}
 
-        <DashboardSidebar mobileOpen={sidebarOpen} onClose={closeSidebar} />
+          <DashboardSidebar mobileOpen={sidebarOpen} onClose={closeSidebar} />
 
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <Topbar onMenuToggle={toggleSidebar} />
-          <main className="flex-1 overflow-y-auto bg-page">{children}</main>
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Topbar onMenuToggle={toggleSidebar} />
+            <main className="flex-1 overflow-y-auto bg-page">{children}</main>
+          </div>
         </div>
-      </div>
-      <DashboardKeyboardShortcuts />
+        <DashboardKeyboardShortcuts />
+      </CommandPaletteProvider>
     </AuthProvider>
   );
 }
