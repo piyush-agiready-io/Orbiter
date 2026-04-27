@@ -61,7 +61,7 @@ function MenuBar({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
         }
         const btn = item as { icon: React.ReactNode; action: () => void; isActive: boolean };
         return (
-          <Button key={i} variant="ghost" size="icon-xs" onClick={btn.action} className={btn.isActive ? 'bg-muted text-primary' : 'text-secondary'}>
+          <Button key={i} variant="ghost" size="icon-xs" onClick={btn.action} className={btn.isActive ? 'bg-subtle text-primary' : 'text-secondary'}>
             {btn.icon}
           </Button>
         );

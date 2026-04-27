@@ -11,7 +11,7 @@
   --color-elevated: var(--color-bg-elevated);
   --color-subtle: var(--color-bg-subtle);
   --color-default: var(--color-border-default);
-  --color-muted: var(--color-bg-muted);
+  --color-muted: var(--color-text-muted);
   --color-primary: var(--color-text-primary);
   --color-secondary: var(--color-text-secondary);
   --color-accent: var(--color-accent);
@@ -51,9 +51,9 @@
 
     /* Text */
     --color-text-primary: #1C1C22;
-    --color-text-secondary: #3F3F4A;
-    --color-text-muted: #565666;
-    --color-text-disabled: #8B8B9A;
+    --color-text-secondary: #2F2F38;
+    --color-text-muted: #3F3F4A;
+    --color-text-disabled: #6B6B78;
     --color-text-inverse: #FAFAFA;
 
     /* Border */
@@ -139,9 +139,9 @@
 
     /* Text */
     --color-text-primary: #F0F0F3;
-    --color-text-secondary: #C8C8D2;
-    --color-text-muted: #A8A8B5;
-    --color-text-disabled: #6A6A78;
+    --color-text-secondary: #DCDCE4;
+    --color-text-muted: #C5C5CF;
+    --color-text-disabled: #7E7E8A;
     --color-text-inverse: #1C1C22;
 
     /* Border */

@@ -79,8 +79,8 @@ export function ChatGPTConnection() {
   if (isLoading) {
     return (
       <div className="animate-pulse rounded-lg border border-[var(--color-border-subtle)] bg-surface p-6">
-        <div className="h-6 w-48 rounded bg-muted" />
-        <div className="mt-4 h-10 w-32 rounded bg-muted" />
+        <div className="h-6 w-48 rounded bg-subtle" />
+        <div className="mt-4 h-10 w-32 rounded bg-subtle" />
       </div>
     );
   }

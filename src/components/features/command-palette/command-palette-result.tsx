@@ -56,7 +56,7 @@ export function CommandPaletteResult({
         )}
       </div>
       {shortcut && (
-        <kbd className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 font-mono text-xs text-muted">
+        <kbd className="shrink-0 rounded-sm bg-subtle px-1.5 py-0.5 font-mono text-xs text-muted">
           {shortcut}
         </kbd>
       )}

@@ -19,7 +19,7 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 };
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  backlog: 'bg-[var(--color-bg-muted)]',
+  backlog: 'bg-[var(--color-bg-subtle)]',
   todo: 'bg-[var(--color-info-muted)]',
   in_progress: 'bg-[var(--color-accent-muted)]',
   review: 'bg-[var(--color-warning-muted)]',

@@ -85,7 +85,7 @@ export function DashboardSidebar({ mobileOpen = false, onClose }: SidebarProps) 
           onClick={handleNavClick}
           className={`flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors duration-[120ms] ease-[ease] ${
             pathname === '/my-work'
-              ? 'bg-muted font-medium text-primary'
+              ? 'bg-subtle font-medium text-primary'
               : 'text-secondary hover:bg-subtle hover:text-primary'
           }`}
         >
@@ -111,7 +111,7 @@ export function DashboardSidebar({ mobileOpen = false, onClose }: SidebarProps) 
                   href={`/projects/${project.id}`}
                   className={`flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors duration-[120ms] ease-[ease] ${
                     isActive
-                      ? 'bg-muted font-medium text-primary'
+                      ? 'bg-subtle font-medium text-primary'
                       : 'text-secondary hover:bg-subtle hover:text-primary'
                   }`}
                 >
@@ -145,7 +145,7 @@ export function DashboardSidebar({ mobileOpen = false, onClose }: SidebarProps) 
                   href={`/projects/${project.id}`}
                   className={`flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors duration-[120ms] ease-[ease] ${
                     isActive
-                      ? 'bg-muted font-medium text-primary'
+                      ? 'bg-subtle font-medium text-primary'
                       : 'text-secondary hover:bg-subtle hover:text-primary'
                   }`}
                 >
@@ -182,7 +182,7 @@ export function DashboardSidebar({ mobileOpen = false, onClose }: SidebarProps) 
           return (
             <div
               key={project.id}
-              className="group flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors duration-[120ms] ease-[ease] data-[active=true]:bg-muted data-[active=true]:font-medium data-[active=true]:text-primary data-[active=false]:text-secondary data-[active=false]:hover:bg-subtle data-[active=false]:hover:text-primary"
+              className="group flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors duration-[120ms] ease-[ease] data-[active=true]:bg-subtle data-[active=true]:font-medium data-[active=true]:text-primary data-[active=false]:text-secondary data-[active=false]:hover:bg-subtle data-[active=false]:hover:text-primary"
               data-active={isActive}
             >
               <Link
@@ -231,7 +231,7 @@ export function DashboardSidebar({ mobileOpen = false, onClose }: SidebarProps) 
             href="/admin"
             className={`flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors duration-[120ms] ease-[ease] ${
               pathname === '/admin'
-                ? 'bg-muted font-medium text-primary'
+                ? 'bg-subtle font-medium text-primary'
                 : 'text-secondary hover:bg-subtle hover:text-primary'
             }`}
           >
@@ -250,7 +250,7 @@ export function DashboardSidebar({ mobileOpen = false, onClose }: SidebarProps) 
           href="/settings/chatgpt"
           className={`flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors duration-[120ms] ease-[ease] ${
             pathname === '/settings/chatgpt'
-              ? 'bg-muted font-medium text-primary'
+              ? 'bg-subtle font-medium text-primary'
               : 'text-secondary hover:bg-subtle hover:text-primary'
           }`}
         >

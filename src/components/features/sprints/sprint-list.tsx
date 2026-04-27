@@ -27,7 +27,7 @@ import type { ISprint } from '@/modules/sprints/sprint.types';
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; style: string }> = {
   planning: {
     icon: <Timer size={14} />,
-    style: 'bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]',
+    style: 'bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)]',
   },
   active: {
     icon: <Play size={14} weight="fill" />,

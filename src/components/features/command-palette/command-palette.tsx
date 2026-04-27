@@ -190,7 +190,7 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
                   onChange={(e) => setQuery(e.target.value)}
                   className="h-12 flex-1 bg-transparent text-base text-primary placeholder:text-muted focus:outline-none"
                 />
-                <kbd className="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-xs text-muted">
+                <kbd className="rounded-sm bg-subtle px-1.5 py-0.5 font-mono text-xs text-muted">
                   esc
                 </kbd>
               </div>

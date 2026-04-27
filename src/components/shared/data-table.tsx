@@ -243,7 +243,7 @@ export function DataTable<T>({
                     key={rowId}
                     className={cn(
                       'border-b border-subtle transition-colors duration-[80ms] ease-linear hover:bg-subtle',
-                      isSelected ? 'bg-muted' : 'bg-surface',
+                      isSelected ? 'bg-subtle' : 'bg-surface',
                       onRowClick && 'cursor-pointer',
                     )}
                     onClick={() => onRowClick?.(row)}
