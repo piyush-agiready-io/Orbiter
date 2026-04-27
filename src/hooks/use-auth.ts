@@ -9,6 +9,9 @@ interface User {
   role: 'admin' | 'internal' | 'client';
   avatar?: string;
   skills?: string[];
+  notificationPreferences?: {
+    emailDigest: 'immediate' | 'daily' | 'none';
+  };
 }
 
 interface AuthState {

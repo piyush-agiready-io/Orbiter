@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useForm } from 'react-hook-form';
@@ -8,6 +8,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/shared/lib/api-client';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { SignOut } from '@phosphor-icons/react';
 import Avatar from 'boring-avatars';
 
@@ -17,11 +24,23 @@ const profileSchema = z.object({
 });
 
 type ProfileInput = z.infer<typeof profileSchema>;
+type EmailDigest = 'immediate' | 'daily' | 'none';
 
 export default function SettingsPage() {
   const { user, setAuth, accessToken, clearAuth } = useAuth();
   const router = useRouter();
   const [saved, setSaved] = useState(false);
+  const [emailDigest, setEmailDigest] = useState<EmailDigest>(
+    user?.notificationPreferences?.emailDigest ?? 'immediate',
+  );
+  const [digestSaving, setDigestSaving] = useState(false);
+  const [digestSaved, setDigestSaved] = useState(false);
+
+  useEffect(() => {
+    if (user?.notificationPreferences?.emailDigest) {
+      setEmailDigest(user.notificationPreferences.emailDigest);
+    }
+  }, [user?.notificationPreferences?.emailDigest]);
 
   const {
     register,
@@ -40,12 +59,28 @@ export default function SettingsPage() {
     const skills = data.skills
       ? data.skills.split(',').map((s) => s.trim()).filter(Boolean)
       : [];
-    const updated = await api.patch('/users/me', { name: data.name, skills });
+    await api.patch('/users/me', { name: data.name, skills });
     if (user && accessToken) {
       setAuth({ ...user, name: data.name, skills } as typeof user, accessToken);
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  }
+
+  async function saveDigest(next: EmailDigest) {
+    setEmailDigest(next);
+    setDigestSaving(true);
+    setDigestSaved(false);
+    await api.patch('/users/me', { notificationPreferences: { emailDigest: next } });
+    if (user && accessToken) {
+      setAuth(
+        { ...user, notificationPreferences: { emailDigest: next } } as typeof user,
+        accessToken,
+      );
+    }
+    setDigestSaving(false);
+    setDigestSaved(true);
+    setTimeout(() => setDigestSaved(false), 3000);
   }
 
   if (!user) return null;
@@ -94,6 +129,26 @@ export default function SettingsPage() {
             {saved && <span className="text-sm text-success">Saved!</span>}
           </div>
         </form>
+      </div>
+
+      <div className="mt-6 rounded-lg border border-subtle bg-surface p-6">
+        <h3 className="text-lg font-medium text-primary">Notifications</h3>
+        <p className="mt-1 text-sm text-secondary">
+          Choose how often Orbiter sends you emails for mentions, P0 bugs, and task updates.
+        </p>
+        <div className="mt-4 max-w-xs space-y-1.5">
+          <label className="block text-sm font-medium text-primary">Email digest</label>
+          <Select value={emailDigest} onValueChange={(v) => saveDigest(v as EmailDigest)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="immediate">Immediate — send each event right away</SelectItem>
+              <SelectItem value="daily">Daily digest — one email per day</SelectItem>
+              <SelectItem value="none">None — turn off email notifications</SelectItem>
+            </SelectContent>
+          </Select>
+          {digestSaving && <p className="text-xs text-muted">Saving…</p>}
+          {digestSaved && <p className="text-xs text-success">Preferences saved</p>}
+        </div>
       </div>
 
       <div className="mt-6 rounded-lg border border-[var(--color-error)]/20 bg-surface p-6">

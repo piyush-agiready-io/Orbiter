@@ -10,6 +10,11 @@ export const updateProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   avatar: z.string().url().optional(),
   skills: z.array(z.string().trim()).optional(),
+  notificationPreferences: z
+    .object({
+      emailDigest: z.enum(['immediate', 'daily', 'none']),
+    })
+    .optional(),
 });
 
 export const userQuerySchema = z.object({
