@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { useCreateTask } from '@/hooks/queries/use-tasks';
 import { useSprints } from '@/hooks/queries/use-sprints';
+import { useEpics } from '@/hooks/queries/use-epics';
 import { useUsers } from '@/hooks/queries/use-users';
 import { InfoTip } from '@/components/shared/info-tip';
 
@@ -33,6 +34,7 @@ const formSchema = z.object({
   type: z.enum(['feature', 'chore', 'improvement']),
   priority: z.enum(['P0', 'P1', 'P2', 'P3']),
   status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']),
+  epicId: z.string().optional(),
   sprintId: z.string().optional(),
 });
 
@@ -48,6 +50,7 @@ interface TaskFormProps {
 export function TaskForm({ projectId, open, onClose, defaultStatus = 'backlog' }: TaskFormProps) {
   const createTask = useCreateTask(projectId);
   const { data: sprintsData } = useSprints(projectId);
+  const { data: epicsData } = useEpics(projectId);
   const { data: usersData } = useUsers();
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
 
@@ -139,17 +142,31 @@ export function TaskForm({ projectId, open, onClose, defaultStatus = 'backlog' }
             </div>
           </div>
 
-          <div>
-            <Label className="text-sm font-medium text-primary">Sprint</Label>
-            <Select value={form.watch('sprintId') ?? ''} onValueChange={(v) => form.setValue('sprintId', v || undefined)}>
-              <SelectTrigger className="mt-1.5"><SelectValue placeholder="None" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">None</SelectItem>
-                {sprintsData?.sprints?.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-sm font-medium text-primary">Epic</Label>
+              <Select value={form.watch('epicId') ?? ''} onValueChange={(v) => form.setValue('epicId', v || undefined)}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {epicsData?.epics?.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-primary">Sprint</Label>
+              <Select value={form.watch('sprintId') ?? ''} onValueChange={(v) => form.setValue('sprintId', v || undefined)}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {sprintsData?.sprints?.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Assignees multi-select */}

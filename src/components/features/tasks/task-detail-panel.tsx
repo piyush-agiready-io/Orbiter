@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTask, useUpdateTask } from '@/hooks/queries/use-tasks';
+import { useEpics } from '@/hooks/queries/use-epics';
 import { format } from 'date-fns';
 import { CommentList } from '@/components/features/comments/comment-list';
 import { CommentInput } from '@/components/features/comments/comment-input';
@@ -23,6 +24,7 @@ interface TaskDetailPanelProps {
 
 export function TaskDetailPanel({ taskId, projectId, onClose }: TaskDetailPanelProps) {
   const { data: task, isLoading } = useTask(taskId);
+  const { data: epicsData } = useEpics(projectId);
   const updateTask = useUpdateTask(projectId);
 
   const handleUpdate = (data: Record<string, unknown>) => {
@@ -111,6 +113,26 @@ export function TaskDetailPanel({ taskId, projectId, onClose }: TaskDetailPanelP
               </div>
             </div>
           )}
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Epic</span>
+            <Select
+              value={(task as { epic?: string | { id?: string } }).epic
+                ? typeof (task as { epic?: string | { id?: string } }).epic === 'string'
+                  ? (task as { epic: string }).epic
+                  : ((task as { epic: { id?: string } }).epic.id ?? '')
+                : ''}
+              onValueChange={(v) => handleUpdate({ epicId: v || null })}
+            >
+              <SelectTrigger size="sm"><SelectValue placeholder="None" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {epicsData?.epics?.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {task.sprint && typeof task.sprint === 'object' && (
             <div className="flex items-center justify-between">
