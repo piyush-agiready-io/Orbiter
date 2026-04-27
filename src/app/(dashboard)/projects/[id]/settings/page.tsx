@@ -387,7 +387,12 @@ export default function ProjectSettingsPage() {
                   );
                   queryClient.invalidateQueries({ queryKey: ['tasks', params.id] });
                 })
-                .catch(() => toast.error('Could not update visibility'));
+                .catch((err: unknown) =>
+                  toast.error(
+                    (err as { message?: string })?.message ??
+                      'Could not update visibility',
+                  ),
+                );
             }}
           >
             Show all existing tasks to client

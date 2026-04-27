@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-page text-primary antialiased">
         <QueryProvider>
           <TooltipProvider>{children}</TooltipProvider>
+          <Toaster richColors closeButton position="top-right" />
         </QueryProvider>
       </body>
     </html>

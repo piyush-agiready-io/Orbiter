@@ -94,13 +94,18 @@ export function LinkGrid() {
 
   const handleSubmit = () => {
     if (!formData.label.trim() || !formData.url.trim()) return;
+    let url = formData.url.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      url = `https://${url}`;
+    }
+    const payload = { ...formData, url };
     if (editingLink) {
       updateLink.mutate(
-        { linkId: editingLink.id, data: formData },
+        { linkId: editingLink.id, data: payload },
         { onSuccess: resetForm },
       );
     } else {
-      createLink.mutate(formData, { onSuccess: resetForm });
+      createLink.mutate(payload, { onSuccess: resetForm });
     }
   };
 
