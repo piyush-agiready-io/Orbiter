@@ -27,6 +27,35 @@ export const BugService = {
     return bug;
   },
 
+  async listByReporter(
+    projectId: string,
+    userId: string,
+    query: Partial<QueryBugsInput> = {},
+  ) {
+    const page = query.page ?? PAGINATION_DEFAULTS.PAGE;
+    const limit = query.limit ?? PAGINATION_DEFAULTS.LIMIT;
+    const skip = (page - 1) * limit;
+    const sort = query.sort ?? '-createdAt';
+
+    const filter: Record<string, unknown> = { project: projectId, reporter: userId };
+    if (query.status) filter.status = query.status;
+
+    const [bugs, total] = await Promise.all([
+      Bug.find(filter).skip(skip).limit(limit).sort(sort),
+      Bug.countDocuments(filter),
+    ]);
+
+    return { bugs, page, limit, total };
+  },
+
+  async countOpenByReporter(projectId: string, userId: string) {
+    return Bug.countDocuments({
+      project: projectId,
+      reporter: userId,
+      status: { $in: ['open', 'investigating'] },
+    });
+  },
+
   async list(projectId: string, query: Partial<QueryBugsInput> = {}) {
     const page = query.page ?? PAGINATION_DEFAULTS.PAGE;
     const limit = query.limit ?? PAGINATION_DEFAULTS.LIMIT;
