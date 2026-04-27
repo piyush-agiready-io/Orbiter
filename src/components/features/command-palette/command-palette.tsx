@@ -52,10 +52,13 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
 
   const results = useMemo(() => {
     if (!query.trim()) {
-      // Show quick actions first, then recent items
-      return items.filter((i) => i.type === 'action').slice(0, 5);
+      // No query — show every action plus a handful of projects so the
+      // palette is useful at first glance, not just for keyboard search.
+      const actions = items.filter((i) => i.type === 'action');
+      const projects = items.filter((i) => i.type === 'project').slice(0, 6);
+      return [...actions, ...projects];
     }
-    return fuse.search(query).map((r) => r.item).slice(0, 10);
+    return fuse.search(query).map((r) => r.item).slice(0, 12);
   }, [query, fuse, items]);
 
   // Group results by type for display

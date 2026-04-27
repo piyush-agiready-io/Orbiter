@@ -1,79 +1,196 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter, usePathname, useParams } from 'next/navigation';
 import { CommandPalette } from './command-palette';
 import type { SearchItem } from './command-palette';
 import { useProjects } from '@/hooks/queries/use-projects';
-
-// Quick actions always available
-function useQuickActions(): SearchItem[] {
-  const router = useRouter();
-
-  return [
-    {
-      id: 'action-create-task',
-      type: 'action',
-      title: 'Create Task',
-      shortcut: 'C',
-      action: () => {
-        // Dispatch custom event to trigger create task modal
-        window.dispatchEvent(new CustomEvent('orbiter:create-task'));
-      },
-    },
-    {
-      id: 'action-close-sprint',
-      type: 'action',
-      title: 'Close Sprint',
-      action: () => router.push('/sprints'),
-    },
-    {
-      id: 'action-invite-user',
-      type: 'action',
-      title: 'Invite User',
-      action: () => router.push('/admin/users'),
-    },
-    {
-      id: 'action-settings',
-      type: 'action',
-      title: 'Go to Settings',
-      action: () => router.push('/settings'),
-    },
-    {
-      id: 'action-my-work',
-      type: 'action',
-      title: 'Go to My Work',
-      action: () => router.push('/my-work'),
-    },
-  ];
-}
+import { useAuth } from '@/hooks/use-auth';
 
 interface ProjectData {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
-  slug: string;
+}
+
+const PROJECT_PAGE_RE = /^\/projects\/([a-f\d]{24})/i;
+
+function toggleTheme() {
+  const root = document.documentElement;
+  const wasDark = root.classList.contains('dark');
+  const nextDark = !wasDark;
+  root.classList.toggle('dark', nextDark);
+  try {
+    localStorage.setItem('orbiter-theme', nextDark ? 'dark' : 'light');
+  } catch {}
 }
 
 export function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { data: projectsRaw } = useProjects();
-  const quickActions = useQuickActions();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useParams<{ id?: string }>();
+  const { data: projectsData } = useProjects();
+  const { user, clearAuth } = useAuth();
 
-  // Cast projects data — the API returns an array of project objects
-  const projects = (Array.isArray(projectsRaw) ? projectsRaw : []) as ProjectData[];
+  // The /projects/[id]/* path segment carries the current project id; use
+  // it to surface the active project's sub-pages as quick jumps.
+  const currentProjectId = useMemo(() => {
+    if (params?.id && /^[a-f\d]{24}$/i.test(params.id)) return params.id;
+    const match = pathname?.match(PROJECT_PAGE_RE);
+    return match?.[1];
+  }, [params, pathname]);
 
-  // Build searchable items from loaded data
-  const items: SearchItem[] = [
-    ...quickActions,
-    ...projects.map((p) => ({
-      id: p._id,
-      type: 'project' as const,
-      title: p.name,
-      subtitle: p.description ?? '',
-      href: `/projects/${p._id}/board`,
-    })),
-  ];
+  const projects = ((projectsData as { projects?: ProjectData[] })?.projects ?? []) as ProjectData[];
+
+  const items: SearchItem[] = useMemo(() => {
+    const list: SearchItem[] = [];
+
+    // ── Global navigation actions ─────────────────────────────────────────
+    list.push(
+      {
+        id: 'nav-home',
+        type: 'action',
+        title: 'Go to Home',
+        subtitle: 'Project list',
+        action: () => router.push('/'),
+      },
+      {
+        id: 'nav-my-work',
+        type: 'action',
+        title: 'Go to My Work',
+        subtitle: 'Tasks assigned to you',
+        action: () => router.push('/my-work'),
+      },
+      {
+        id: 'nav-settings',
+        type: 'action',
+        title: 'Go to Settings',
+        action: () => router.push('/settings'),
+      },
+      {
+        id: 'nav-chatgpt',
+        type: 'action',
+        title: 'Go to ChatGPT Settings',
+        subtitle: 'Connect / manage AI integration',
+        action: () => router.push('/settings/chatgpt'),
+      },
+    );
+
+    if (user?.role === 'admin') {
+      list.push({
+        id: 'nav-admin',
+        type: 'action',
+        title: 'Go to Team',
+        subtitle: 'Manage team members and invites',
+        action: () => router.push('/admin'),
+      });
+    }
+
+    // ── Active project sub-page jumps ─────────────────────────────────────
+    if (currentProjectId) {
+      const projectName = projects.find((p) => p.id === currentProjectId)?.name;
+      const subtitle = projectName ?? 'Current project';
+      list.push(
+        {
+          id: 'project-board',
+          type: 'action',
+          title: 'Project: Board',
+          subtitle,
+          action: () => router.push(`/projects/${currentProjectId}/board`),
+        },
+        {
+          id: 'project-backlog',
+          type: 'action',
+          title: 'Project: Backlog',
+          subtitle,
+          action: () => router.push(`/projects/${currentProjectId}/backlog`),
+        },
+        {
+          id: 'project-sprints',
+          type: 'action',
+          title: 'Project: Sprints',
+          subtitle,
+          action: () => router.push(`/projects/${currentProjectId}/sprints`),
+        },
+        {
+          id: 'project-epics',
+          type: 'action',
+          title: 'Project: Epics',
+          subtitle,
+          action: () => router.push(`/projects/${currentProjectId}/epics`),
+        },
+        {
+          id: 'project-bugs',
+          type: 'action',
+          title: 'Project: Bugs',
+          subtitle,
+          action: () => router.push(`/projects/${currentProjectId}/bugs`),
+        },
+        {
+          id: 'project-docs',
+          type: 'action',
+          title: 'Project: Docs',
+          subtitle,
+          action: () => router.push(`/projects/${currentProjectId}/docs`),
+        },
+        {
+          id: 'project-timeline',
+          type: 'action',
+          title: 'Project: Timeline',
+          subtitle,
+          action: () => router.push(`/projects/${currentProjectId}/timeline`),
+        },
+        {
+          id: 'project-activity',
+          type: 'action',
+          title: 'Project: Activity',
+          subtitle,
+          action: () => router.push(`/projects/${currentProjectId}/activity`),
+        },
+        {
+          id: 'project-settings',
+          type: 'action',
+          title: 'Project: Settings',
+          subtitle,
+          action: () => router.push(`/projects/${currentProjectId}/settings`),
+        },
+      );
+    }
+
+    // ── Utility actions ───────────────────────────────────────────────────
+    list.push(
+      {
+        id: 'util-toggle-theme',
+        type: 'action',
+        title: 'Toggle theme',
+        subtitle: 'Switch between light and dark',
+        action: () => toggleTheme(),
+      },
+      {
+        id: 'util-sign-out',
+        type: 'action',
+        title: 'Sign out',
+        action: () => {
+          clearAuth();
+          router.push('/login');
+        },
+      },
+    );
+
+    // ── Projects ──────────────────────────────────────────────────────────
+    for (const p of projects) {
+      list.push({
+        id: `project-${p.id}`,
+        type: 'project',
+        title: p.name,
+        subtitle: p.description ?? '',
+        href: `/projects/${p.id}/board`,
+      });
+    }
+
+    return list;
+  }, [router, user?.role, currentProjectId, projects, clearAuth]);
 
   // Global keyboard listener + custom-event opener (clicked from sidebar)
   useEffect(() => {
