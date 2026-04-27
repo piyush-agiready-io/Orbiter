@@ -31,7 +31,9 @@ export const updateTaskSchema = z.object({
 
 export const taskQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(50),
+  // Sprint card / task pickers fetch limit=200 to load full sprint
+  // contents in one shot; cap was 100 which 400'd those calls.
+  limit: z.coerce.number().int().positive().max(500).default(50),
   status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']).optional(),
   priority: z.enum(['P0', 'P1', 'P2', 'P3']).optional(),
   type: z.enum(['feature', 'chore', 'improvement']).optional(),

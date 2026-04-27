@@ -4,12 +4,19 @@ import {
   QueryClient,
   QueryClientProvider,
   MutationCache,
+  QueryCache,
   type Mutation,
+  type Query,
 } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
 interface MutationMeta {
+  silent?: boolean;
+  errorMessage?: string;
+}
+
+interface QueryMeta {
   silent?: boolean;
   errorMessage?: string;
 }
@@ -38,6 +45,19 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             refetchOnReconnect: true,
           },
         },
+        // Surface query errors as toasts. Without this, a failed GET (e.g.
+        // a 400 from a request validation issue) silently produces an
+        // empty UI — exactly how the limit=200 cap stayed hidden for so
+        // long. Set meta.silent on a query to opt out.
+        queryCache: new QueryCache({
+          onError: (error, query: Query<unknown, unknown, unknown>) => {
+            const meta = query.meta as QueryMeta | undefined;
+            if (meta?.silent) return;
+            const message =
+              meta?.errorMessage ?? defaultErrorMessage(error);
+            toast.error(message);
+          },
+        }),
         mutationCache: new MutationCache({
           onError: (error, _vars, _ctx, mutation: Mutation<unknown, unknown, unknown, unknown>) => {
             const meta = mutation.options.meta as MutationMeta | undefined;
