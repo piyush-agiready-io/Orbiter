@@ -8,6 +8,7 @@ export const ACTIVITY_ACTIONS = [
   'sprint_created',
   'sprint_started',
   'sprint_closed',
+  'sprint_deleted',
   'comment_added',
   'member_added',
   'member_removed',

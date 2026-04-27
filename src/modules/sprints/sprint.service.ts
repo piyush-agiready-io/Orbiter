@@ -49,6 +49,18 @@ export const SprintService = {
     return sprint;
   },
 
+  async delete(id: string) {
+    const sprint = await Sprint.findById(id);
+    if (!sprint) throw new NotFoundError('Sprint');
+
+    // Detach the sprint from every task that referenced it so the tasks
+    // survive (in their backlog/board views) instead of pointing at a
+    // dangling sprint id.
+    await Task.updateMany({ sprint: id }, { $unset: { sprint: 1 } });
+    await Sprint.findByIdAndDelete(id);
+    return sprint;
+  },
+
   async activate(id: string, projectId: string) {
     const existing = await Sprint.findOne({ project: projectId, status: 'active' });
     if (existing && existing._id.toString() !== id) {

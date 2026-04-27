@@ -16,7 +16,8 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSprints, useUpdateSprint } from '@/hooks/queries/use-sprints';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { useSprints, useUpdateSprint, useDeleteSprint } from '@/hooks/queries/use-sprints';
 import { useTasks, useUpdateTask } from '@/hooks/queries/use-tasks';
 import { InfoTip } from '@/components/shared/info-tip';
 import { TaskForm } from '@/components/features/tasks/task-form';
@@ -63,7 +64,9 @@ interface SprintListProps {
 export function SprintList({ projectId, onClose, onCreate }: SprintListProps) {
   const { data, isLoading } = useSprints(projectId);
   const updateSprint = useUpdateSprint(projectId);
+  const deleteSprint = useDeleteSprint(projectId);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deletingSprint, setDeletingSprint] = useState<ISprint | null>(null);
 
   if (isLoading) {
     return (
@@ -131,10 +134,36 @@ export function SprintList({ projectId, onClose, onCreate }: SprintListProps) {
                 )
               }
               onClose={() => onClose(sprint.id)}
+              onDelete={() => setDeletingSprint(sprint as ISprint)}
             />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deletingSprint}
+        onOpenChange={(open) => !open && setDeletingSprint(null)}
+        variant="danger"
+        title={`Delete "${deletingSprint?.name ?? 'sprint'}"?`}
+        description="The sprint will be removed and any tasks in it will move back to the backlog. This can't be undone."
+        confirmLabel="Delete sprint"
+        loading={deleteSprint.isPending}
+        onConfirm={() => {
+          if (!deletingSprint) return;
+          const id = deletingSprint.id;
+          deleteSprint.mutate(id, {
+            onSuccess: () => {
+              toast.success('Sprint deleted');
+              if (expandedId === id) setExpandedId(null);
+              setDeletingSprint(null);
+            },
+            onError: (err: unknown) =>
+              toast.error(
+                (err as { message?: string })?.message ?? 'Could not delete sprint',
+              ),
+          });
+        }}
+      />
     </div>
   );
 }
@@ -146,6 +175,7 @@ interface SprintCardProps {
   onToggle: () => void;
   onActivate: () => void;
   onClose: () => void;
+  onDelete: () => void;
 }
 
 function SprintCard({
@@ -155,6 +185,7 @@ function SprintCard({
   onToggle,
   onActivate,
   onClose,
+  onDelete,
 }: SprintCardProps) {
   const config = STATUS_CONFIG[sprint.status];
   const [taskFormOpen, setTaskFormOpen] = useState(false);
@@ -223,6 +254,19 @@ function SprintCard({
               {sprint.velocity?.planned ?? 0}
             </span>
           )}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="text-[var(--color-text-muted)] hover:text-[var(--color-error)]"
+            title="Delete sprint"
+            aria-label="Delete sprint"
+          >
+            <Trash size={14} />
+          </Button>
         </div>
       </div>
 

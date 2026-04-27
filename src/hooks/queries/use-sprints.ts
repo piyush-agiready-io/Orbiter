@@ -64,6 +64,18 @@ export function useCloseSprint(projectId: string) {
   });
 }
 
+export function useDeleteSprint(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (sprintId: string) => api.delete(`/sprints/${sprintId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
+    },
+  });
+}
+
 export function useSprintTasks(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({

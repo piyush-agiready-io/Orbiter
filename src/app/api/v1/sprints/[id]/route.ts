@@ -1,6 +1,7 @@
 import { apiHandler } from '@/shared/middleware/api-handler';
 import { requireRole } from '@/shared/middleware/role-guard';
 import { SprintService } from '@/modules/sprints/sprint.service';
+import { ActivityService } from '@/modules/activity/activity.service';
 import { updateSprintSchema } from '@/modules/sprints/sprint.validator';
 import type { UpdateSprintInput } from '@/modules/sprints/sprint.validator';
 
@@ -23,5 +24,22 @@ export const PATCH = apiHandler({
     }
     const sprint = await SprintService.update(ctx.params.id, body);
     return { data: sprint.toJSON() };
+  },
+});
+
+export const DELETE = apiHandler({
+  middleware: [requireRole('admin', 'internal')],
+  handler: async (_req, ctx) => {
+    const sprint = await SprintService.getById(ctx.params.id);
+    await SprintService.delete(ctx.params.id);
+    ActivityService.log({
+      project: sprint.project.toString(),
+      actor: ctx.user.userId,
+      action: 'sprint_deleted',
+      targetType: 'sprint',
+      targetId: sprint._id.toString(),
+      targetTitle: sprint.name,
+    }).catch(() => {});
+    return { data: { deleted: true } };
   },
 });

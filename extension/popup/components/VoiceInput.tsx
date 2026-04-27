@@ -1,63 +1,101 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { apiRequest } from '@ext/shared/api';
+import { API_BASE_URL } from '@ext/shared/constants';
+import { getStoredTokens, isTokenExpired } from '@ext/shared/storage';
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
   disabled?: boolean;
 }
 
-interface DeepgramToken {
-  token: string;
-  expiresAt: number;
+async function getAccessToken(): Promise<string | null> {
+  try {
+    const expired = await isTokenExpired();
+    if (expired) {
+      const response = await chrome.runtime.sendMessage({ type: 'REFRESH_TOKEN' });
+      if (!response?.success) return null;
+    }
+    const tokens = await getStoredTokens();
+    return tokens?.accessToken || null;
+  } catch {
+    return null;
+  }
 }
 
 export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current = null;
-    }
-
-    if (wsRef.current) {
-      if (wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'CloseStream' }));
-      }
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-
+  const cleanup = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
+    mediaRecorderRef.current = null;
+    chunksRef.current = [];
+  }, []);
 
+  const transcribe = useCallback(
+    async (blob: Blob) => {
+      setIsTranscribing(true);
+      setError(null);
+
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          setError('Not authenticated');
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/deepgram/transcribe`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': blob.type || 'audio/webm',
+          },
+          body: blob,
+        });
+
+        const json = await response.json();
+        if (!response.ok || !json.success) {
+          setError(json.error?.message || `Transcription failed (${response.status})`);
+          return;
+        }
+
+        const transcript = (json.data?.transcript ?? '').trim();
+        if (transcript) {
+          onTranscript(transcript);
+        } else {
+          setError('No speech detected');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Transcription failed');
+      } finally {
+        setIsTranscribing(false);
+      }
+    },
+    [onTranscript],
+  );
+
+  const stopRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    }
     setIsRecording(false);
   }, []);
 
   const startRecording = useCallback(async () => {
     setError(null);
-
-    const tokenResult = await apiRequest<DeepgramToken>('/deepgram/token', {
-      method: 'POST',
-    });
-
-    if (!tokenResult.success) {
-      setError(tokenResult.error || 'Voice unavailable');
-      return;
-    }
-
-    const { token } = tokenResult.data;
+    chunksRef.current = [];
 
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, sampleRate: 16000 },
+        audio: { channelCount: 1 },
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === 'NotAllowedError') {
@@ -69,56 +107,39 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
     }
     streamRef.current = stream;
 
-    const ws = new WebSocket(
-      'wss://api.deepgram.com/v1/listen?model=nova-2&language=en&smart_format=true&punctuate=true',
-      ['token', token],
-    );
-    wsRef.current = ws;
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm';
+    const recorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorderRef.current = recorder;
 
-    ws.onopen = () => {
-      setIsRecording(true);
-
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-      });
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-          ws.send(event.data);
-        }
-      };
-
-      mediaRecorder.start(250);
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunksRef.current.push(event.data);
     };
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const transcript = data.channel?.alternatives?.[0]?.transcript;
-        if (transcript && data.is_final) {
-          onTranscript(transcript);
-        }
-      } catch {
-        // Ignore parse errors
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: mimeType });
+      cleanup();
+      if (blob.size > 0) {
+        void transcribe(blob);
       }
     };
 
-    ws.onerror = () => {
-      setError('Voice connection failed');
-      stopRecording();
-    };
-
-    ws.onclose = () => {
+    recorder.onerror = () => {
+      setError('Recording failed');
+      cleanup();
       setIsRecording(false);
     };
-  }, [onTranscript, stopRecording]);
+
+    recorder.start();
+    setIsRecording(true);
+  }, [cleanup, transcribe]);
 
   const toggleRecording = useCallback(() => {
     if (isRecording) {
       stopRecording();
     } else {
-      startRecording();
+      void startRecording();
     }
   }, [isRecording, startRecording, stopRecording]);
 
@@ -127,7 +148,7 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
       <button
         type="button"
         onClick={toggleRecording}
-        disabled={disabled}
+        disabled={disabled || isTranscribing}
         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
         style={{
           background: isRecording ? 'var(--color-error-muted)' : 'var(--color-bg-subtle)',
@@ -151,7 +172,7 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
           <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
           <line x1="12" x2="12" y1="19" y2="22" />
         </svg>
-        {isRecording ? 'Stop' : 'Voice'}
+        {isRecording ? 'Stop' : isTranscribing ? 'Transcribing…' : 'Voice'}
       </button>
 
       {isRecording && (
@@ -164,8 +185,12 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
         </span>
       )}
 
-      {error && !isRecording && (
-        <span className="text-xs truncate max-w-[160px]" style={{ color: 'var(--color-error)' }} title={error}>
+      {error && !isRecording && !isTranscribing && (
+        <span
+          className="text-xs truncate max-w-[180px]"
+          style={{ color: 'var(--color-error)' }}
+          title={error}
+        >
           {error}
         </span>
       )}
