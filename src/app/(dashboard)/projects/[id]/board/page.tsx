@@ -6,6 +6,7 @@ import { KanbanBoard } from '@/components/features/kanban/kanban-board';
 import { KanbanFilterBar, type TaskFilters } from '@/components/features/kanban/kanban-filter-bar';
 import { TaskForm } from '@/components/features/tasks/task-form';
 import { TaskDetailPanel } from '@/components/features/tasks/task-detail-panel';
+import { ActiveSprintBanner } from '@/components/features/sprints/active-sprint-banner';
 import { useTasks } from '@/hooks/queries/use-tasks';
 import type { ITask } from '@/modules/tasks/task.types';
 
@@ -22,6 +23,7 @@ export default function BoardPage() {
 
   return (
     <div className="flex h-full flex-col p-0">
+      <ActiveSprintBanner projectId={projectId} />
       <KanbanFilterBar
         filters={filters}
         onFilterChange={setFilters}

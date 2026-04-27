@@ -19,23 +19,34 @@ export default function SprintsPage() {
 
   if (selectedSprintId) {
     return (
-      <div className="flex h-full">
-        <div className="flex-1">
-          <SprintBoard
-            sprintId={selectedSprintId}
-            projectId={params.id}
-            onBack={() => setSelectedSprintId(null)}
-            onTaskClick={setSelectedTask}
-          />
+      <>
+        <div className="flex h-full">
+          <div className="flex-1">
+            <SprintBoard
+              sprintId={selectedSprintId}
+              projectId={params.id}
+              onBack={() => setSelectedSprintId(null)}
+              onTaskClick={setSelectedTask}
+              onClose={setClosingSprintId}
+            />
+          </div>
+          {selectedTask && (
+            <TaskDetailPanel
+              taskId={selectedTask.id}
+              projectId={params.id}
+              onClose={() => setSelectedTask(null)}
+            />
+          )}
         </div>
-        {selectedTask && (
-          <TaskDetailPanel
-            taskId={selectedTask.id}
+        {closingSprintId && (
+          <SprintCloseDialog
+            sprintId={closingSprintId}
             projectId={params.id}
-            onClose={() => setSelectedTask(null)}
+            open={!!closingSprintId}
+            onClose={() => setClosingSprintId(null)}
           />
         )}
-      </div>
+      </>
     );
   }
 

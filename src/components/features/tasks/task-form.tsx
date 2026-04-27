@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -45,9 +45,16 @@ interface TaskFormProps {
   open: boolean;
   onClose: () => void;
   defaultStatus?: string;
+  defaultSprintId?: string;
 }
 
-export function TaskForm({ projectId, open, onClose, defaultStatus = 'backlog' }: TaskFormProps) {
+export function TaskForm({
+  projectId,
+  open,
+  onClose,
+  defaultStatus = 'backlog',
+  defaultSprintId,
+}: TaskFormProps) {
   const createTask = useCreateTask(projectId);
   const { data: sprintsData } = useSprints(projectId);
   const { data: epicsData } = useEpics(projectId);
@@ -65,8 +72,24 @@ export function TaskForm({ projectId, open, onClose, defaultStatus = 'backlog' }
       type: 'feature',
       priority: 'P2',
       status: defaultStatus as FormValues['status'],
+      sprintId: defaultSprintId,
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        title: '',
+        description: '',
+        type: 'feature',
+        priority: 'P2',
+        status: defaultStatus as FormValues['status'],
+        sprintId: defaultSprintId,
+      });
+      setSelectedAssignees([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, defaultStatus, defaultSprintId]);
 
   const onSubmit = (values: FormValues) => {
     createTask.mutate({ ...values, assigneeIds: selectedAssignees }, {
