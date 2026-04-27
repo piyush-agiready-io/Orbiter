@@ -121,8 +121,8 @@ export function BugDetail({ projectId, bugId }: { projectId: string; bugId: stri
     updateBug.mutate({ bugId, data: { priority } });
   }
 
-  function handleAssigneeChange(value: string) {
-    const assigneeId = value === '__none__' ? null : value;
+  function handleAssigneeChange(value: string | null) {
+    const assigneeId = !value || value === '__none__' ? null : value;
     updateBug.mutate(
       { bugId, data: { assigneeId } },
       {
