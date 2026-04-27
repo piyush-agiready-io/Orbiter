@@ -94,6 +94,41 @@ export const SprintService = {
       { $set: updateData },
       { returnDocument: 'after' },
     );
+
+    try {
+      const { Project } = await import('@/modules/projects/project.model');
+      const { User } = await import('@/modules/users/user.model');
+      const { NotificationService } = await import('@/modules/notifications/notification.service');
+      const { sendSprintCloseEmail } = await import('@/shared/lib/email');
+      const { env } = await import('@/config/env');
+
+      const project = await Project.findById(sprint.project).select('name members').lean();
+      if (project) {
+        const velocity = { planned: totalTasks, completed: completedTasks };
+        const members = await User.find({ _id: { $in: project.members } })
+          .select('email notificationPreferences')
+          .lean();
+        const link = `/projects/${String(sprint.project)}/sprints`;
+
+        for (const member of members) {
+          NotificationService.notify(
+            String(member._id), 'sprint_closed',
+            `Sprint "${closed!.name}" closed`,
+            `${completedTasks}/${totalTasks} tasks completed`,
+            link,
+          ).catch(() => {});
+
+          const pref = member.notificationPreferences?.emailDigest ?? 'immediate';
+          if (pref === 'immediate') {
+            sendSprintCloseEmail(
+              member.email, closed!.name, project.name, velocity,
+              `${env.NEXT_PUBLIC_APP_URL}${link}`,
+            ).catch(() => {});
+          }
+        }
+      }
+    } catch {}
+
     return closed!;
   },
 

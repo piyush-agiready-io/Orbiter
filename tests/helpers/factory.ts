@@ -12,6 +12,7 @@ import { Link } from '@/modules/links/link.model';
 import { EnvVariable } from '@/modules/env-variables/env-variable.model';
 import { AuditLog } from '@/modules/audit-logs/audit-log.model';
 import { Activity } from '@/modules/activity/activity.model';
+import { Epic } from '@/modules/epics/epic.model';
 import { encrypt } from '@/shared/lib/encryption';
 import type { Role } from '@/shared/utils/constants';
 
@@ -180,6 +181,17 @@ export async function createActivity(projectId: string, userId: string, override
     targetTitle: 'Test Task',
   };
   return Activity.create({ ...defaults, ...overrides });
+}
+
+export async function createEpic(projectId: string, ownerId: string, overrides: Record<string, unknown> = {}) {
+  const defaults = {
+    title: 'Test Epic',
+    project: projectId,
+    owner: ownerId,
+    status: 'planning',
+    progress: 0,
+  };
+  return Epic.create({ ...defaults, ...overrides });
 }
 
 export { DEFAULT_PASSWORD };

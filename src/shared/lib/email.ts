@@ -166,3 +166,47 @@ export async function sendMentionEmail(
 
   return sendEmail({ to, subject: `${mentionedBy} mentioned you in Orbiter`, html });
 }
+
+export async function sendSprintCloseEmail(
+  to: string,
+  sprintName: string,
+  projectName: string,
+  velocity: { planned: number; completed: number },
+  dashboardUrl: string,
+): Promise<boolean> {
+  const completionRate = velocity.planned > 0
+    ? Math.round((velocity.completed / velocity.planned) * 100)
+    : 0;
+  const html = baseTemplate(`
+    <h2 style="margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a2e;">Sprint Closed</h2>
+    <p style="margin:0 0 16px;font-size:14px;color:#4a4a68;line-height:1.6;">
+      <strong>${sprintName}</strong> in <strong>${projectName}</strong> has been closed.
+    </p>
+    <div style="padding:12px 16px;background:#f4f4f7;border-radius:4px;margin:0 0 24px;">
+      <p style="margin:0 0 4px;font-size:14px;color:#4a4a68;">Completed: <strong>${velocity.completed}/${velocity.planned}</strong> tasks (${completionRate}%)</p>
+    </div>
+    ${buttonHtml('View Sprint', dashboardUrl)}
+  `);
+
+  return sendEmail({ to, subject: `Sprint closed: ${sprintName} — ${projectName}`, html });
+}
+
+export async function sendTaskCompletedEmail(
+  to: string,
+  taskTitle: string,
+  projectName: string,
+  viewUrl: string,
+): Promise<boolean> {
+  const html = baseTemplate(`
+    <h2 style="margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a2e;">Task Completed</h2>
+    <p style="margin:0 0 16px;font-size:14px;color:#4a4a68;line-height:1.6;">
+      A task you're following in <strong>${projectName}</strong> has been completed:
+    </p>
+    <div style="padding:12px 16px;background:#f0fdf4;border-left:3px solid #22c55e;border-radius:4px;margin:0 0 24px;">
+      <p style="margin:0;font-size:14px;font-weight:500;color:#1a1a2e;">${taskTitle}</p>
+    </div>
+    ${buttonHtml('View Task', viewUrl)}
+  `);
+
+  return sendEmail({ to, subject: `Task completed: ${taskTitle}`, html });
+}

@@ -7,7 +7,7 @@ export const ActivityService = {
     project: string;
     actor: string;
     action: ActivityAction;
-    targetType: 'task' | 'bug' | 'sprint' | 'comment' | 'project' | 'doc' | 'link' | 'member';
+    targetType: 'task' | 'bug' | 'sprint' | 'comment' | 'project' | 'doc' | 'link' | 'member' | 'epic';
     targetId?: string;
     targetTitle?: string;
     meta?: Record<string, unknown>;

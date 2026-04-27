@@ -32,7 +32,7 @@ const activitySchema = new Schema<ActivityDocument>(
     },
     targetType: {
       type: String,
-      enum: ['task', 'bug', 'sprint', 'comment', 'project', 'doc', 'link', 'member'],
+      enum: ['task', 'bug', 'sprint', 'comment', 'project', 'doc', 'link', 'member', 'epic'],
       required: true,
     },
     targetId: { type: String },

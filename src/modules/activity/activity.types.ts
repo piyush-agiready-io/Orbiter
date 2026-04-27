@@ -16,6 +16,9 @@ export const ACTIVITY_ACTIONS = [
   'doc_updated',
   'link_added',
   'github_synced',
+  'epic_created',
+  'epic_updated',
+  'epic_deleted',
 ] as const;
 
 export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number];
@@ -25,7 +28,7 @@ export interface IActivity {
   project: string;
   actor: string;
   action: ActivityAction;
-  targetType: 'task' | 'bug' | 'sprint' | 'comment' | 'project' | 'doc' | 'link' | 'member';
+  targetType: 'task' | 'bug' | 'sprint' | 'comment' | 'project' | 'doc' | 'link' | 'member' | 'epic';
   targetId?: string;
   targetTitle?: string;
   meta?: Record<string, unknown>;
