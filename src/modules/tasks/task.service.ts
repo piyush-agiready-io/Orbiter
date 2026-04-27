@@ -277,6 +277,28 @@ export const TaskService = {
     const task = await Task.findByIdAndDelete(id);
     if (!task) throw new NotFoundError('Task');
     if (task.epic) recalcEpicsAffected(String(task.epic));
+
+    // Clean up entities that pointed at this task so the UI doesn't
+    // keep surfacing it (notifications dropdown, my-work, bug detail).
+    // Activity log entries are intentionally left alone — they're
+    // history and should still show "task deleted by X".
+    try {
+      const [{ NotificationService }, { Comment }, { Bug }] = await Promise.all([
+        import('@/modules/notifications/notification.service'),
+        import('@/modules/comments/comment.model'),
+        import('@/modules/bugs/bug.model'),
+      ]);
+      await Promise.all([
+        NotificationService.deleteByTaskId(id),
+        Comment.deleteMany({ taskId: id }),
+        Bug.updateMany({ task: id }, { $unset: { task: 1 } }),
+      ]);
+    } catch (err) {
+      // Best-effort cascade; the task is already gone, so don't fail
+      // the delete just because cleanup hit a transient error.
+      console.error('Task delete cascade cleanup failed:', err);
+    }
+
     return task;
   },
 

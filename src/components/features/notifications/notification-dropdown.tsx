@@ -1,8 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Bug, UserCircle, Flag, GitBranch, At, Bell } from '@phosphor-icons/react';
-import { useNotifications, useMarkAsRead, useMarkAllRead } from '@/hooks/queries/use-notifications';
+import { Bug, UserCircle, Flag, GitBranch, At, Bell, X } from '@phosphor-icons/react';
+import {
+  useNotifications,
+  useMarkAsRead,
+  useMarkAllRead,
+  useDeleteNotification,
+} from '@/hooks/queries/use-notifications';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -53,6 +58,7 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
   const { data, isLoading } = useNotifications({ limit: '20' });
   const markAsRead = useMarkAsRead();
   const markAllRead = useMarkAllRead();
+  const deleteNotification = useDeleteNotification();
 
   const notifications: NotificationItem[] =
     (data as { notifications?: NotificationItem[] })?.notifications ?? [];
@@ -116,30 +122,48 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
 
         <div className="p-1.5">
           {notifications.map((notification) => (
-            <button
+            <div
               key={notification.id}
-              type="button"
-              onClick={() => handleClick(notification)}
-              className={`flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-100 ${
+              className={`group relative flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors duration-100 ${
                 !notification.read
                   ? 'bg-[var(--color-accent-muted)]/40 hover:bg-[var(--color-accent-muted)]/60'
                   : 'hover:bg-subtle'
               }`}
             >
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-subtle">
-                {getNotificationIcon(notification.type)}
+              <button
+                type="button"
+                onClick={() => handleClick(notification)}
+                className="flex flex-1 min-w-0 items-start gap-3 text-left"
+              >
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-subtle">
+                  {getNotificationIcon(notification.type)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm leading-snug ${!notification.read ? 'font-semibold text-primary' : 'text-secondary'}`}>
+                    {notification.title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--color-text-muted)] line-clamp-2">{notification.message}</p>
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">{timeAgo(notification.createdAt)}</p>
+                </div>
+              </button>
+              <div className="ml-1 flex shrink-0 items-center gap-1.5">
+                {!notification.read && (
+                  <span className="h-2.5 w-2.5 rounded-full bg-accent" />
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteNotification.mutate(notification.id);
+                  }}
+                  className="rounded p-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-subtle hover:text-primary group-hover:opacity-100"
+                  aria-label="Delete notification"
+                  title="Delete notification"
+                >
+                  <X size={12} />
+                </button>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className={`text-sm leading-snug ${!notification.read ? 'font-semibold text-primary' : 'text-secondary'}`}>
-                  {notification.title}
-                </p>
-                <p className="mt-0.5 text-xs text-[var(--color-text-muted)] line-clamp-2">{notification.message}</p>
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">{timeAgo(notification.createdAt)}</p>
-              </div>
-              {!notification.read && (
-                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-accent" />
-              )}
-            </button>
+            </div>
           ))}
         </div>
       </div>

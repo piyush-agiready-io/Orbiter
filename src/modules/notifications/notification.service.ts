@@ -53,6 +53,24 @@ export const NotificationService = {
     );
   },
 
+  async delete(id: string, userId: string) {
+    const notification = await Notification.findOneAndDelete({
+      _id: id,
+      user: userId,
+    });
+    if (!notification) {
+      throw new NotFoundError('Notification');
+    }
+    return notification;
+  },
+
+  async deleteByTaskId(taskId: string) {
+    // Notifications carry the task id inside their link string
+    // (e.g. /projects/X/board?task=<taskId>). Removing them keeps the
+    // dropdown from pointing at a now-deleted task.
+    await Notification.deleteMany({ link: { $regex: `task=${taskId}` } });
+  },
+
   async notify(
     userId: string,
     type: NotificationType,
