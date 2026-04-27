@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useQueryClient } from '@tanstack/react-query';
 import Avatar from 'boring-avatars';
 import { X } from '@phosphor-icons/react';
 import { toast } from 'sonner';
@@ -56,6 +57,7 @@ export function TaskForm({
   defaultStatus = 'backlog',
   defaultSprintId,
 }: TaskFormProps) {
+  const queryClient = useQueryClient();
   const createTask = useCreateTask(projectId);
   const updateTask = useUpdateTask(projectId);
   const { data: sprintsData } = useSprints(projectId);
@@ -130,6 +132,17 @@ export function TaskForm({
           });
         }
       }
+
+      // Force a hard refetch of every task query for this project so
+      // the sprint card / board / backlog re-render with the new task
+      // immediately, regardless of cache state. The hook-level
+      // invalidate already does this via refetchType:'all', but mutate's
+      // local onSuccess can fire before the invalidation settles —
+      // awaiting refetchQueries here closes that gap.
+      await queryClient.refetchQueries({
+        queryKey: ['tasks', projectId],
+        type: 'all',
+      });
 
       const sprintName = finalSprintId
         ? sprintsData?.sprints?.find((s) => s.id === finalSprintId)?.name
