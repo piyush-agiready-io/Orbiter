@@ -2,16 +2,19 @@
 
 import { useParams } from 'next/navigation';
 import { TimelineChart } from '@/components/features/timeline/timeline-chart';
+import { useTimeline } from '@/hooks/queries/use-timeline';
 
 export default function PortalTimelinePage() {
   const params = useParams<{ id: string }>();
+  const { data, isLoading } = useTimeline(params.id);
 
   return (
-    <div className="p-6">
-      <TimelineChart sprints={[]} isLoading={false} />
-      <p className="mt-4 text-center text-sm text-secondary">
-        Project: {params.id}
-      </p>
+    <div className="h-full overflow-auto p-6">
+      <TimelineChart
+        sprints={data?.sprints ?? []}
+        epics={data?.epics ?? []}
+        isLoading={isLoading}
+      />
     </div>
   );
 }
