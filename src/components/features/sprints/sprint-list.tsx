@@ -160,14 +160,19 @@ function SprintCard({
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const { data: tasksData } = useTasks(
+  const { data: tasksData, isLoading: tasksLoading } = useTasks(
     projectId,
-    expanded ? { sprint: sprint.id, limit: '200' } : undefined,
+    { sprint: sprint.id, limit: '200' },
+    { enabled: expanded },
   );
   const updateTask = useUpdateTask(projectId);
   const tasks = (tasksData?.tasks ?? []) as ITask[];
   const doneCount = tasks.filter((t) => t.status === 'done').length;
   const isClosed = sprint.status === 'closed';
+  // Loading is true on first expansion. Once we've fetched once, treat
+  // "no tasks" as authoritative even while a refetch is in flight, so
+  // the empty state doesn't flicker after task creation invalidations.
+  const showSkeleton = expanded && tasksLoading && !tasksData;
 
   return (
     <div className="rounded-lg border border-[var(--color-border-subtle)] bg-surface">
@@ -225,9 +230,11 @@ function SprintCard({
         <div className="border-t border-subtle px-4 py-3">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wide text-muted">
-              {tasks.length === 0
-                ? 'No tasks yet'
-                : `${doneCount}/${tasks.length} done`}
+              {showSkeleton
+                ? 'Loading tasks…'
+                : tasks.length === 0
+                  ? 'No tasks yet'
+                  : `${doneCount}/${tasks.length} done`}
             </span>
             {!isClosed && (
               <div className="flex items-center gap-2">
@@ -247,7 +254,13 @@ function SprintCard({
             )}
           </div>
 
-          {tasks.length === 0 ? (
+          {showSkeleton ? (
+            <div className="space-y-2 py-2">
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-6 w-2/3" />
+            </div>
+          ) : tasks.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted">
               {isClosed
                 ? 'This sprint had no tasks.'

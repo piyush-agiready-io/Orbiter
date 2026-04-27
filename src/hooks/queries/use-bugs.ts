@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/lib/api-client';
 import { useAuth } from '@/hooks/use-auth';
 
+const ALL = { refetchType: 'all' as const };
+
 export function useBugs(projectId: string, filters?: Record<string, string>) {
   const isAuthenticated = useAuth((s) => s.isAuthenticated);
   return useQuery({
@@ -31,7 +33,7 @@ export function useCreateBug(projectId: string) {
       metadata?: Record<string, unknown>;
     }) => api.post(`/projects/${projectId}/bugs`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bugs', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['bugs', projectId], ...ALL });
     },
   });
 }
@@ -42,8 +44,8 @@ export function useUpdateBug(projectId: string) {
     mutationFn: ({ bugId, data }: { bugId: string; data: Record<string, unknown> }) =>
       api.patch(`/bugs/${bugId}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bugs', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['bug'] });
+      queryClient.invalidateQueries({ queryKey: ['bugs', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['bug'], ...ALL });
     },
   });
 }
@@ -53,7 +55,7 @@ export function useDeleteBug(projectId: string) {
   return useMutation({
     mutationFn: (bugId: string) => api.delete(`/bugs/${bugId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bugs', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['bugs', projectId], ...ALL });
     },
   });
 }
@@ -64,8 +66,8 @@ export function useLinkBug(projectId: string) {
     mutationFn: ({ bugId, taskId }: { bugId: string; taskId: string | null }) =>
       api.patch(`/bugs/${bugId}/link`, { taskId }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bugs', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['bug'] });
+      queryClient.invalidateQueries({ queryKey: ['bugs', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['bug'], ...ALL });
     },
   });
 }
@@ -78,10 +80,10 @@ export function useConvertBugToTask(projectId: string) {
         `/bugs/${bugId}/convert-to-task`,
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bugs', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['bug'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['bugs', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['bug'], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
     },
   });
 }

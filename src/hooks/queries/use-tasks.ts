@@ -3,8 +3,13 @@ import { api } from '@/shared/lib/api-client';
 import { useAuth } from '@/hooks/use-auth';
 import type { ITask } from '@/modules/tasks/task.types';
 
-export function useTasks(projectId: string, filters?: Record<string, string>) {
+export function useTasks(
+  projectId: string,
+  filters?: Record<string, string>,
+  options?: { enabled?: boolean },
+) {
   const isAuthenticated = useAuth((s) => s.isAuthenticated);
+  const callerEnabled = options?.enabled ?? true;
   return useQuery({
     queryKey: ['tasks', projectId, filters],
     queryFn: () =>
@@ -12,7 +17,7 @@ export function useTasks(projectId: string, filters?: Record<string, string>) {
         `/projects/${projectId}/tasks`,
         filters,
       ),
-    enabled: isAuthenticated && !!projectId,
+    enabled: isAuthenticated && !!projectId && callerEnabled,
   });
 }
 
@@ -25,14 +30,21 @@ export function useTask(taskId: string) {
   });
 }
 
+// `refetchType: 'all'` forces ALL matching queries (including inactive
+// observers) to refetch. Without it, a sprint card you collapsed before
+// creating a task would serve cached/empty data on re-expansion.
+const ALL = { refetchType: 'all' as const };
+
 export function useCreateTask(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: Record<string, unknown>) =>
-      api.post(`/projects/${projectId}/tasks`, data),
+      api.post<ITask>(`/projects/${projectId}/tasks`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['epics', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId], ...ALL });
     },
   });
 }
@@ -42,9 +54,11 @@ export function useUpdateTask(projectId: string) {
   return useMutation({
     mutationFn: ({ taskId, data }: { taskId: string; data: Record<string, unknown> }) =>
       api.patch(`/tasks/${taskId}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['task', vars.taskId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['epics', projectId], ...ALL });
     },
   });
 }
@@ -54,9 +68,11 @@ export function useUpdateTaskStatus(projectId: string) {
   return useMutation({
     mutationFn: ({ taskId, status, order }: { taskId: string; status: string; order?: number }) =>
       api.patch(`/tasks/${taskId}/status`, { status, order }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['task', vars.taskId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['epics', projectId], ...ALL });
     },
   });
 }
@@ -67,7 +83,9 @@ export function useBulkUpdateTasks(projectId: string) {
     mutationFn: (data: { taskIds: string[]; update: Record<string, unknown> }) =>
       api.patch('/tasks/bulk', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['epics', projectId], ...ALL });
     },
   });
 }
@@ -77,7 +95,9 @@ export function useDeleteTask(projectId: string) {
   return useMutation({
     mutationFn: (taskId: string) => api.delete(`/tasks/${taskId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['epics', projectId], ...ALL });
     },
   });
 }

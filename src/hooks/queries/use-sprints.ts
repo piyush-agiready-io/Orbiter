@@ -25,14 +25,16 @@ export function useSprint(sprintId: string) {
   });
 }
 
+const ALL = { refetchType: 'all' as const };
+
 export function useCreateSprint(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: { name: string; goal?: string; startDate: string; endDate: string }) =>
       api.post(`/projects/${projectId}/sprints`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
     },
   });
 }
@@ -43,8 +45,8 @@ export function useUpdateSprint(projectId: string) {
     mutationFn: ({ sprintId, data }: { sprintId: string; data: Record<string, unknown> }) =>
       api.patch(`/sprints/${sprintId}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
     },
   });
 }
@@ -55,9 +57,9 @@ export function useCloseSprint(projectId: string) {
     mutationFn: ({ sprintId, data }: { sprintId: string; data: { retroNotes?: string; rolloverTaskIds?: string[] } }) =>
       api.post(`/sprints/${sprintId}/close`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
     },
   });
 }
@@ -70,8 +72,9 @@ export function useSprintTasks(projectId: string) {
         ? api.post(`/sprints/${sprintId}/tasks`, { taskIds })
         : api.delete(`/sprints/${sprintId}/tasks`, { taskIds }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId], ...ALL });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId], ...ALL });
     },
   });
 }

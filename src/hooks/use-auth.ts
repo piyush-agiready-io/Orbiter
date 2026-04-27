@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface User {
   id: string;
@@ -23,11 +24,29 @@ interface AuthState {
   setAccessToken: (token: string) => void;
 }
 
-export const useAuth = create<AuthState>((set) => ({
-  user: null,
-  accessToken: null,
-  isAuthenticated: false,
-  setAuth: (user, token) => set({ user, accessToken: token, isAuthenticated: true }),
-  clearAuth: () => set({ user: null, accessToken: null, isAuthenticated: false }),
-  setAccessToken: (token) => set({ accessToken: token }),
-}));
+// Persist auth state so a page refresh doesn't gate every query behind a
+// roundtrip to /auth/refresh. The api-client refreshes lazily on 401, and
+// AuthProvider re-validates in the background — that's enough.
+export const useAuth = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      accessToken: null,
+      isAuthenticated: false,
+      setAuth: (user, token) =>
+        set({ user, accessToken: token, isAuthenticated: true }),
+      clearAuth: () =>
+        set({ user: null, accessToken: null, isAuthenticated: false }),
+      setAccessToken: (token) => set({ accessToken: token }),
+    }),
+    {
+      name: 'orbiter-auth',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    },
+  ),
+);

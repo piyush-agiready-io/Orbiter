@@ -8,16 +8,23 @@ const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-passwor
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated, setAuth, clearAuth } = useAuth();
+  // Only block rendering when we have NO cached auth at all. With a cached
+  // token from localStorage we render immediately and validate in the
+  // background — queries can fire right away instead of waiting on a
+  // roundtrip to /auth/refresh.
   const [isChecking, setIsChecking] = useState(!isAuthenticated);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
+    // Already authenticated (cache hydrated). Make sure clients land in the
+    // portal, then validate in the background to refresh the access token.
     if (isAuthenticated && user) {
       if (user.role === 'client' && !pathname.startsWith('/portal')) {
         router.replace('/portal');
       }
       setIsChecking(false);
+      validateInBackground();
       return;
     }
 
@@ -46,6 +53,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsChecking(false);
       }
     }
+
+    async function validateInBackground() {
+      try {
+        const res = await fetch('/api/v1/auth/refresh', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAuth(data.data.user, data.data.accessToken);
+        } else if (res.status === 401) {
+          // Refresh token expired — clear cache and bounce to login.
+          clearAuth();
+          if (!PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+            router.replace('/login');
+          }
+        }
+        // Network errors: keep the cached token; api-client will refresh on 401.
+      } catch {
+        // Offline / network blip: keep the cached token.
+      }
+    }
+
     checkAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
