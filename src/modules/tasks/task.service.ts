@@ -101,10 +101,10 @@ export const TaskService = {
 
     if (task.epic) recalcEpicsAffected(String(task.epic));
 
-    // Populate sprint so the API response carries { id, name } — the
-    // client uses this both for an immediate optimistic toast ("Added
-    // to <sprint>") and to update its cache without a second fetch.
-    await task.populate('sprint', 'name');
+    // Return the raw document; toJSON serializes sprint as its hex
+    // string so the client can verify the association without a
+    // populate call (which would require the Sprint model to be
+    // registered in this module's import graph).
     return task;
   },
 
