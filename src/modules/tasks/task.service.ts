@@ -7,6 +7,19 @@ import { escapeRegExp } from '@/shared/utils/escape-regex';
 import { env } from '@/config/env';
 import type { CreateTaskInput, UpdateTaskInput, UpdateStatusInput, BulkUpdateInput } from './task.validator';
 
+async function recalcEpicsAffected(...ids: (string | null | undefined)[]) {
+  const unique = Array.from(
+    new Set(ids.filter((id): id is string => Boolean(id)).map(String)),
+  );
+  if (unique.length === 0) return;
+  try {
+    const { EpicService } = await import('@/modules/epics/epic.service');
+    await Promise.all(
+      unique.map((id) => EpicService.calculateProgress(id).catch(() => {})),
+    );
+  } catch {}
+}
+
 async function notifyAssignees(assigneeIds: string[], taskTitle: string, projectId: string, userId?: string) {
   if (assigneeIds.length === 0) return;
   try {
@@ -67,6 +80,8 @@ export const TaskService = {
 
     notifyAssignees(assigneeIds ?? [], task.title, projectId, userId);
 
+    if (task.epic) recalcEpicsAffected(String(task.epic));
+
     return task;
   },
 
@@ -125,12 +140,23 @@ export const TaskService = {
     if (sprintId !== undefined) updateData.sprint = sprintId;
     if (assigneeIds !== undefined) updateData.assignees = assigneeIds;
 
+    let previousEpicId: string | undefined;
+    if (epicId !== undefined || data.status !== undefined) {
+      const existing = await Task.findById(id).select('epic').lean();
+      previousEpicId = existing?.epic ? String(existing.epic) : undefined;
+    }
+
     const task = await Task.findByIdAndUpdate(
       id,
       { $set: updateData },
       { returnDocument: 'after', runValidators: true },
     );
     if (!task) throw new NotFoundError('Task');
+
+    if (previousEpicId !== undefined || task.epic) {
+      recalcEpicsAffected(previousEpicId, task.epic ? String(task.epic) : null);
+    }
+
     return task;
   },
 
@@ -144,6 +170,8 @@ export const TaskService = {
       { returnDocument: 'after', runValidators: true },
     );
     if (!task) throw new NotFoundError('Task');
+
+    if (task.epic) recalcEpicsAffected(String(task.epic));
 
     if (data.status === 'done' && task.clientVisible) {
       try {
@@ -192,15 +220,32 @@ export const TaskService = {
     if (update.epicId !== undefined) updateData.epic = update.epicId;
     if (update.sprintId !== undefined) updateData.sprint = update.sprintId;
 
-    return Task.updateMany(
+    let priorEpicIds: string[] = [];
+    if (update.status !== undefined || update.epicId !== undefined) {
+      const before = await Task.find({ _id: { $in: taskIds } })
+        .select('epic')
+        .lean();
+      priorEpicIds = before
+        .map((t) => (t.epic ? String(t.epic) : null))
+        .filter((v): v is string => Boolean(v));
+    }
+
+    const result = await Task.updateMany(
       { _id: { $in: taskIds } },
       { $set: updateData },
     );
+
+    const allEpics = [...priorEpicIds];
+    if (update.epicId) allEpics.push(String(update.epicId));
+    if (allEpics.length > 0) recalcEpicsAffected(...allEpics);
+
+    return result;
   },
 
   async delete(id: string) {
     const task = await Task.findByIdAndDelete(id);
     if (!task) throw new NotFoundError('Task');
+    if (task.epic) recalcEpicsAffected(String(task.epic));
     return task;
   },
 
@@ -271,6 +316,7 @@ export const TaskService = {
     )
       .populate('assignees', 'name email avatar');
     if (!task) throw new NotFoundError('Task');
+    if (task.epic) recalcEpicsAffected(String(task.epic));
     return task;
   },
 };

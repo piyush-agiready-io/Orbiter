@@ -74,6 +74,7 @@ export const EpicService = {
   async delete(id: string) {
     const epic = await Epic.findByIdAndDelete(id);
     if (!epic) throw new NotFoundError('Epic');
+    await Task.updateMany({ epic: id }, { $unset: { epic: 1 } });
     return epic;
   },
 
