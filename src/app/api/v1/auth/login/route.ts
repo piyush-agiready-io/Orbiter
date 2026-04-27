@@ -18,6 +18,17 @@ export async function POST(req: NextRequest) {
     const body = validateBody(loginSchema, rawBody);
     const result = await AuthService.login(body);
 
+    // Expire any cookie that older builds set at the narrower
+    // /api/v1/auth/refresh path. Without this, old cookies linger in the
+    // browser, get sent before the new path=/ cookie, and break refresh
+    // for users who logged in pre-migration.
+    const expireOldCookie = serialize('refreshToken', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/api/v1/auth/refresh',
+      maxAge: 0,
+    });
     const cookie = serialize('refreshToken', result.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -30,7 +41,8 @@ export async function POST(req: NextRequest) {
       apiSuccess({ user: result.user, accessToken: result.accessToken }),
       { status: 200 },
     );
-    response.headers.set('Set-Cookie', cookie);
+    response.headers.append('Set-Cookie', expireOldCookie);
+    response.headers.append('Set-Cookie', cookie);
     return response;
   } catch (error) {
     if (error instanceof RateLimitError) {

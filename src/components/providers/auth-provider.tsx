@@ -17,14 +17,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Already authenticated (cache hydrated). Make sure clients land in the
-    // portal, then validate in the background to refresh the access token.
+    // Already authenticated (cache hydrated). Trust the cached state —
+    // the api-client refreshes the access token lazily on the first 401
+    // and clears auth if that refresh fails. A separate eager validate
+    // here was bouncing users to /login whenever the refresh cookie was
+    // momentarily stale (e.g. immediately after login when an old
+    // path-scoped cookie shadowed the new one).
     if (isAuthenticated && user) {
       if (user.role === 'client' && !pathname.startsWith('/portal')) {
         router.replace('/portal');
       }
       setIsChecking(false);
-      validateInBackground();
       return;
     }
 
@@ -51,28 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearAuth();
       } finally {
         setIsChecking(false);
-      }
-    }
-
-    async function validateInBackground() {
-      try {
-        const res = await fetch('/api/v1/auth/refresh', {
-          method: 'POST',
-          credentials: 'include',
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setAuth(data.data.user, data.data.accessToken);
-        } else if (res.status === 401) {
-          // Refresh token expired — clear cache and bounce to login.
-          clearAuth();
-          if (!PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-            router.replace('/login');
-          }
-        }
-        // Network errors: keep the cached token; api-client will refresh on 401.
-      } catch {
-        // Offline / network blip: keep the cached token.
       }
     }
 
