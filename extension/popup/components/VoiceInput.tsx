@@ -1,11 +1,9 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { apiRequest } from '@ext/shared/api';
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
   disabled?: boolean;
-  /** When true, don't render anything if voice is unavailable (no error text shown) */
-  hideWhenUnavailable?: boolean;
 }
 
 interface DeepgramToken {
@@ -13,100 +11,12 @@ interface DeepgramToken {
   expiresAt: number;
 }
 
-export function VoiceInput({ onTranscript, disabled, hideWhenUnavailable }: VoiceInputProps) {
+export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [voiceUnavailable, setVoiceUnavailable] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-
-  // Probe voice availability on mount so we can hide the button early
-  useEffect(() => {
-    if (hideWhenUnavailable) {
-      apiRequest<DeepgramToken>('/deepgram/token', { method: 'POST' }).then((result) => {
-        if (!result.success) {
-          setVoiceUnavailable(true);
-        }
-      });
-    }
-  }, [hideWhenUnavailable]);
-
-  const startRecording = useCallback(async () => {
-    setError(null);
-
-    try {
-      const tokenResult = await apiRequest<DeepgramToken>('/deepgram/token', {
-        method: 'POST',
-      });
-
-      if (!tokenResult.success) {
-        setVoiceUnavailable(true);
-        setError('Voice input unavailable');
-        return;
-      }
-
-      const { token } = tokenResult.data;
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: 16000,
-        },
-      });
-      streamRef.current = stream;
-
-      const ws = new WebSocket(
-        'wss://api.deepgram.com/v1/listen?model=nova-2&language=en&smart_format=true&punctuate=true',
-        ['token', token],
-      );
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        setIsRecording(true);
-
-        const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'audio/webm;codecs=opus',
-        });
-        mediaRecorderRef.current = mediaRecorder;
-
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-            ws.send(event.data);
-          }
-        };
-
-        mediaRecorder.start(250);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          const transcript = data.channel?.alternatives?.[0]?.transcript;
-          if (transcript && data.is_final) {
-            onTranscript(transcript);
-          }
-        } catch {
-          // Ignore parse errors
-        }
-      };
-
-      ws.onerror = () => {
-        setError('Voice connection failed');
-        stopRecording();
-      };
-
-      ws.onclose = () => {
-        setIsRecording(false);
-      };
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'NotAllowedError') {
-        setError('Microphone access denied');
-      } else {
-        setError('Failed to start recording');
-      }
-    }
-  }, [onTranscript]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -130,6 +40,80 @@ export function VoiceInput({ onTranscript, disabled, hideWhenUnavailable }: Voic
     setIsRecording(false);
   }, []);
 
+  const startRecording = useCallback(async () => {
+    setError(null);
+
+    const tokenResult = await apiRequest<DeepgramToken>('/deepgram/token', {
+      method: 'POST',
+    });
+
+    if (!tokenResult.success) {
+      setError(tokenResult.error || 'Voice unavailable');
+      return;
+    }
+
+    const { token } = tokenResult.data;
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, sampleRate: 16000 },
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'NotAllowedError') {
+        setError('Microphone access denied');
+      } else {
+        setError('Could not access microphone');
+      }
+      return;
+    }
+    streamRef.current = stream;
+
+    const ws = new WebSocket(
+      'wss://api.deepgram.com/v1/listen?model=nova-2&language=en&smart_format=true&punctuate=true',
+      ['token', token],
+    );
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      setIsRecording(true);
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus',
+      });
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+          ws.send(event.data);
+        }
+      };
+
+      mediaRecorder.start(250);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        const transcript = data.channel?.alternatives?.[0]?.transcript;
+        if (transcript && data.is_final) {
+          onTranscript(transcript);
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    };
+
+    ws.onerror = () => {
+      setError('Voice connection failed');
+      stopRecording();
+    };
+
+    ws.onclose = () => {
+      setIsRecording(false);
+    };
+  }, [onTranscript, stopRecording]);
+
   const toggleRecording = useCallback(() => {
     if (isRecording) {
       stopRecording();
@@ -138,17 +122,12 @@ export function VoiceInput({ onTranscript, disabled, hideWhenUnavailable }: Voic
     }
   }, [isRecording, startRecording, stopRecording]);
 
-  // Hide completely when voice is unavailable and caller opted in
-  if (hideWhenUnavailable && voiceUnavailable) {
-    return null;
-  }
-
   return (
     <div className="flex items-center gap-2">
       <button
         type="button"
         onClick={toggleRecording}
-        disabled={disabled || voiceUnavailable}
+        disabled={disabled}
         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
         style={{
           background: isRecording ? 'var(--color-error-muted)' : 'var(--color-bg-subtle)',
@@ -156,7 +135,7 @@ export function VoiceInput({ onTranscript, disabled, hideWhenUnavailable }: Voic
           border: `1px solid ${isRecording ? 'var(--color-error)' : 'var(--color-border-default)'}`,
           borderRadius: 'var(--radius-md)',
         }}
-        title={isRecording ? 'Stop recording' : 'Start voice input'}
+        title={isRecording ? 'Stop recording' : 'Record voice description'}
       >
         <svg
           width="14"
@@ -181,12 +160,12 @@ export function VoiceInput({ onTranscript, disabled, hideWhenUnavailable }: Voic
             className="w-2 h-2 rounded-full animate-pulse"
             style={{ background: 'var(--color-error)' }}
           />
-          Recording...
+          Recording…
         </span>
       )}
 
-      {error && !hideWhenUnavailable && (
-        <span className="text-xs" style={{ color: 'var(--color-error)' }}>
+      {error && !isRecording && (
+        <span className="text-xs truncate max-w-[160px]" style={{ color: 'var(--color-error)' }} title={error}>
           {error}
         </span>
       )}

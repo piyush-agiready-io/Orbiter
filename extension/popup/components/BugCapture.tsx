@@ -263,7 +263,6 @@ export function BugCapture({ user, onLogout }: BugCaptureProps) {
             <VoiceInput
               onTranscript={handleVoiceTranscript}
               disabled={submitState !== 'idle'}
-              hideWhenUnavailable
             />
           </div>
           <textarea
