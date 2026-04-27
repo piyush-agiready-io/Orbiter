@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProjectStats } from '@/components/features/dashboard/project-stats';
+import { ChatGPTConnectBanner } from '@/components/features/dashboard/chatgpt-connect-banner';
 import { useState } from 'react';
 
 interface Project {
@@ -70,7 +71,7 @@ export default function DashboardPage() {
   const { data: statsData } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: () => api.get<Record<string, ProjectTaskStats>>('/dashboard/stats'),
-    enabled: isAuthenticated && projects.length > 0,
+    enabled: isAuthenticated,
     staleTime: 60 * 1000,
   });
   const projectStats = statsData as Record<string, ProjectTaskStats> | undefined;
@@ -92,6 +93,7 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6">
+      <ChatGPTConnectBanner />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-primary">Projects</h1>
