@@ -3,6 +3,10 @@ import { NotFoundError } from '@/shared/middleware/api-handler';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import { escapeRegExp } from '@/shared/utils/escape-regex';
 import type { CreateBugInput, UpdateBugInput, QueryBugsInput } from './bug.validator';
+// Register referenced models so .populate('reporter' | 'assignee' | 'task')
+// works on cold-start function instances.
+import '@/modules/users/user.model';
+import '@/modules/tasks/task.model';
 
 export const BugService = {
   async create(projectId: string, data: CreateBugInput, userId: string) {

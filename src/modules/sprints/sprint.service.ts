@@ -3,6 +3,8 @@ import { Task } from '@/modules/tasks/task.model';
 import { NotFoundError, ConflictError } from '@/shared/middleware/api-handler';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import type { CreateSprintInput, UpdateSprintInput, CloseSprintInput, SprintTasksInput } from './sprint.validator';
+// Register User model for .populate('assignees') used by getTaskCountPerMember.
+import '@/modules/users/user.model';
 
 export const SprintService = {
   async create(projectId: string, data: CreateSprintInput) {

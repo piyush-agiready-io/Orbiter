@@ -6,6 +6,8 @@ import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import { escapeRegExp } from '@/shared/utils/escape-regex';
 import type { Role } from '@/shared/utils/constants';
 import type { CreateProjectInput, UpdateProjectInput } from './project.validator';
+// Register User model for .populate('owner' | 'members' | 'clients').
+import '@/modules/users/user.model';
 
 function slugify(name: string): string {
   return (

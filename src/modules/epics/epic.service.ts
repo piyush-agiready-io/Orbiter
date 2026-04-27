@@ -4,6 +4,8 @@ import { NotFoundError } from '@/shared/middleware/api-handler';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import { escapeRegExp } from '@/shared/utils/escape-regex';
 import type { CreateEpicInput, UpdateEpicInput } from './epic.validator';
+// Register User model for .populate('owner').
+import '@/modules/users/user.model';
 
 export const EpicService = {
   async create(projectId: string, data: CreateEpicInput, userId: string) {

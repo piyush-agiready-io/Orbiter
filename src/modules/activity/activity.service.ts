@@ -1,6 +1,10 @@
 import { Activity } from './activity.model';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import type { ActivityAction } from './activity.types';
+// Register referenced models so .populate('actor' | 'project') works on
+// cold-start function instances.
+import '@/modules/users/user.model';
+import '@/modules/projects/project.model';
 
 export const ActivityService = {
   async log(data: {

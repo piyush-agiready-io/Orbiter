@@ -2,6 +2,8 @@ import { Doc } from '@/modules/docs/doc.model';
 import { NotFoundError } from '@/shared/middleware/api-handler';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import type { CreateDocInput, UpdateDocInput } from './doc.validator';
+// Register User model for .populate('author').
+import '@/modules/users/user.model';
 
 export const DocService = {
   async create(projectId: string, data: CreateDocInput, userId: string) {

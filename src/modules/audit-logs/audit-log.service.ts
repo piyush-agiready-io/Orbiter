@@ -1,6 +1,8 @@
 import { AuditLog } from '@/modules/audit-logs/audit-log.model';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import type { AuditAction, Environment } from './audit-log.types';
+// Register User model for .populate('userId').
+import '@/modules/users/user.model';
 
 export const AuditLogService = {
   async create(params: {

@@ -6,6 +6,14 @@ import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import { escapeRegExp } from '@/shared/utils/escape-regex';
 import { env } from '@/config/env';
 import type { CreateTaskInput, UpdateTaskInput, UpdateStatusInput, BulkUpdateInput } from './task.validator';
+// Side-effect imports register the referenced models so .populate() works
+// regardless of which other service has been loaded in this request's
+// function instance. Without these, GET /tasks (which populates sprint)
+// throws MissingSchemaError on cold-start function instances and the
+// sprint card silently shows empty.
+import '@/modules/sprints/sprint.model';
+import '@/modules/epics/epic.model';
+import '@/modules/projects/project.model';
 
 async function recalcEpicsAffected(...ids: (string | null | undefined)[]) {
   const unique = Array.from(
