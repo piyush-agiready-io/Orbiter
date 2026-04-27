@@ -77,7 +77,7 @@ export async function processStatusUpdate(
           type: 'client_task_done',
           title: 'Task Completed',
           message: `Task "${task.title}" has been completed.`,
-          link: `/projects/${projectId}/tasks/${String(task._id)}`,
+          link: `/portal/projects/${projectId}`,
         });
       }
       actions.push('client_notified');

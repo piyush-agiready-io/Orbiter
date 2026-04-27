@@ -27,10 +27,42 @@ export const CommentService = {
     if (data.mentions.length > 0) {
       const author = await User.findById(userId).select('name').lean();
       const authorName = author?.name ?? 'Someone';
-      const contextLabel = parentType === 'bug' ? 'a bug report' : 'a task';
-      const link = parentType === 'bug'
-        ? `/bugs/${parentId}`
-        : `/tasks/${parentId}`;
+
+      // Look up parent to build a link that actually resolves and to show
+      // the task/bug title in the notification.
+      let parentTitle = '';
+      let projectId = '';
+      try {
+        if (parentType === 'task') {
+          const { Task } = await import('@/modules/tasks/task.model');
+          const task = await Task.findById(parentId).select('title project').lean();
+          if (task) {
+            parentTitle = task.title;
+            projectId = String(task.project);
+          }
+        } else {
+          const { Bug } = await import('@/modules/bugs/bug.model');
+          const bug = await Bug.findById(parentId).select('title project').lean();
+          if (bug) {
+            parentTitle = bug.title;
+            projectId = String(bug.project);
+          }
+        }
+      } catch {}
+
+      const link = projectId
+        ? parentType === 'bug'
+          ? `/projects/${projectId}/bugs/${parentId}`
+          : `/projects/${projectId}/board?task=${parentId}`
+        : '/';
+
+      const contextLabel = parentTitle
+        ? parentType === 'bug'
+          ? `bug "${parentTitle}"`
+          : `task "${parentTitle}"`
+        : parentType === 'bug'
+          ? 'a bug report'
+          : 'a task';
 
       const { NotificationService } = await import(
         '@/modules/notifications/notification.service'
@@ -45,8 +77,8 @@ export const CommentService = {
           await NotificationService.notify(
             mentionedUser._id.toString(),
             'comment_mention',
-            `${authorName} mentioned you`,
-            data.content.slice(0, 100),
+            `${authorName} mentioned you in ${contextLabel}`,
+            `"${data.content.slice(0, 140)}${data.content.length > 140 ? '…' : ''}"`,
             link,
           );
 

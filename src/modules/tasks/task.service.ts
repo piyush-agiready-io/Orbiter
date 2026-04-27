@@ -20,7 +20,13 @@ async function recalcEpicsAffected(...ids: (string | null | undefined)[]) {
   } catch {}
 }
 
-async function notifyAssignees(assigneeIds: string[], taskTitle: string, projectId: string, userId?: string) {
+async function notifyAssignees(
+  assigneeIds: string[],
+  taskTitle: string,
+  projectId: string,
+  taskId: string,
+  userId?: string,
+) {
   if (assigneeIds.length === 0) return;
   try {
     const { NotificationService } = await import('@/modules/notifications/notification.service');
@@ -28,7 +34,7 @@ async function notifyAssignees(assigneeIds: string[], taskTitle: string, project
     const author = userId ? await User.findById(userId).select('name').lean() : null;
     const authorName = author?.name ?? 'Someone';
     const assignees = await User.find({ _id: { $in: assigneeIds } }).select('name email').lean();
-    const link = `/projects/${projectId}/board`;
+    const link = `/projects/${projectId}/board?task=${taskId}`;
 
     await Promise.all(
       assignees.map(async (a) => {
@@ -78,7 +84,7 @@ export const TaskService = {
         .catch((err) => console.error('Priority detection failed silently:', err));
     }
 
-    notifyAssignees(assigneeIds ?? [], task.title, projectId, userId);
+    notifyAssignees(assigneeIds ?? [], task.title, projectId, String(task._id), userId);
 
     if (task.epic) recalcEpicsAffected(String(task.epic));
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams, useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { KanbanBoard } from '@/components/features/kanban/kanban-board';
 import { KanbanFilterBar, type TaskFilters } from '@/components/features/kanban/kanban-filter-bar';
 import { TaskForm } from '@/components/features/tasks/task-form';
@@ -15,6 +15,9 @@ import type { ISprint } from '@/modules/sprints/sprint.types';
 export default function BoardPage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [filters, setFilters] = useState<TaskFilters>({});
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
@@ -22,6 +25,27 @@ export default function BoardPage() {
 
   const { data, isLoading } = useTasks(projectId, filters as Record<string, string>);
   const tasks = data?.tasks ?? [];
+
+  // Deep-link via ?task=<id> (used by mention notifications, my-work, etc.)
+  const taskParam = searchParams.get('task');
+  useEffect(() => {
+    if (!taskParam) return;
+    const found = tasks.find((t) => t.id === taskParam);
+    if (found && (!selectedTask || selectedTask.id !== found.id)) {
+      setSelectedTask(found);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskParam, tasks]);
+
+  const closeDetail = () => {
+    setSelectedTask(null);
+    if (taskParam) {
+      const sp = new URLSearchParams(searchParams.toString());
+      sp.delete('task');
+      const qs = sp.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname);
+    }
+  };
 
   const { data: sprintsData } = useSprints(projectId);
   const sprints = ((sprintsData?.sprints ?? []) as ISprint[])
@@ -62,7 +86,7 @@ export default function BoardPage() {
           <TaskDetailPanel
             taskId={selectedTask.id}
             projectId={projectId}
-            onClose={() => setSelectedTask(null)}
+            onClose={closeDetail}
           />
         )}
       </div>
