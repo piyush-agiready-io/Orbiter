@@ -61,8 +61,8 @@ export function TaskForm({
   const { data: usersData } = useUsers();
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
 
-  const allUsers = ((usersData as { users?: { id: string; name: string; email: string; role: string }[] })?.users ?? [])
-    .filter((u) => u.role !== 'client');
+  const allUsers = ((usersData as { users?: { id: string; name: string; email: string; role: string; inviteStatus?: string }[] })?.users ?? [])
+    .filter((u) => u.role !== 'client' && u.inviteStatus === 'active');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

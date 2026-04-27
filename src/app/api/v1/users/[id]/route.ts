@@ -8,7 +8,7 @@ export const DELETE = apiHandler({
     if (ctx.params.id === ctx.user.userId) {
       return { data: null, status: 400 };
     }
-    await UserService.deactivate(ctx.params.id);
-    return { data: { deleted: true } };
+    const result = await UserService.removeFromPlatform(ctx.params.id);
+    return { data: { deleted: true, hardDeleted: result.hardDeleted } };
   },
 });

@@ -135,4 +135,26 @@ export const UserService = {
     }
     return user;
   },
+
+  async removeFromPlatform(id: string) {
+    const user = await User.findById(id);
+    if (!user) throw new NotFoundError('User');
+
+    const { Project } = await import('@/modules/projects/project.model');
+    await Project.updateMany(
+      { $or: [{ members: id }, { clients: id }] },
+      { $pull: { members: id, clients: id } },
+    );
+
+    if (!user.lastLoginAt) {
+      await User.deleteOne({ _id: id });
+      return { hardDeleted: true };
+    }
+
+    user.isActive = false;
+    user.inviteToken = undefined;
+    user.inviteExpiresAt = undefined;
+    await user.save();
+    return { hardDeleted: false };
+  },
 };

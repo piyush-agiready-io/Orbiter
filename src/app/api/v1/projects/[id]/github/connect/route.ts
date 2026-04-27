@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 import { serialize } from 'cookie';
 import { connectDB } from '@/shared/database/connection';
 import { authenticate } from '@/shared/middleware/auth';
-import { GitHubOAuthService } from '@/modules/github/github-oauth.service';
+import { GitHubOAuthService, GitHubOAuthConfigError } from '@/modules/github/github-oauth.service';
 import { apiSuccess, apiError } from '@/shared/utils/api-response';
 
 export async function POST(
@@ -32,7 +32,13 @@ export async function POST(
     const response = NextResponse.json(apiSuccess({ authUrl }), { status: 200 });
     response.headers.set('Set-Cookie', cookie);
     return response;
-  } catch {
+  } catch (err) {
+    if (err instanceof GitHubOAuthConfigError) {
+      return NextResponse.json(
+        apiError('GITHUB_NOT_CONFIGURED', err.message),
+        { status: 503 },
+      );
+    }
     return NextResponse.json(apiError('UNAUTHORIZED', 'Not authenticated'), { status: 401 });
   }
 }

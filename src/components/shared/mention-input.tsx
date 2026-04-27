@@ -9,6 +9,7 @@ interface MentionUser {
   name: string;
   email: string;
   role: string;
+  inviteStatus?: string;
 }
 
 interface MentionInputProps {
@@ -38,7 +39,7 @@ export function MentionInput({
 
   const { data: usersData } = useUsers();
   const allUsers: MentionUser[] = ((usersData as { users?: MentionUser[] })?.users ?? [])
-    .filter((u) => u.role !== 'client');
+    .filter((u) => u.role !== 'client' && u.inviteStatus === 'active');
 
   const filtered = allUsers.filter(
     (u) => !query || u.name.toLowerCase().includes(query.toLowerCase()) || u.email.toLowerCase().includes(query.toLowerCase()),

@@ -89,6 +89,20 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   });
 
   const justConnected = searchParams.get('connected') === 'true';
+  const callbackError = searchParams.get('error');
+
+  useEffect(() => {
+    if (justConnected) toast.success('GitHub connected');
+    if (callbackError) {
+      const messages: Record<string, string> = {
+        invalid_state: 'Connection failed: state mismatch. Try again.',
+        missing_params: 'Connection failed: GitHub did not return the expected response.',
+        github_failed: 'Connection failed: GitHub returned an error. Try again.',
+      };
+      toast.error(messages[callbackError] ?? `Connection failed: ${callbackError}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [justConnected, callbackError]);
 
   const handleConnect = () => {
     connectGitHub.mutate(undefined, {
@@ -96,7 +110,11 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
         const url = (result as { authUrl: string }).authUrl;
         window.location.href = url;
       },
-      onError: () => toast.error('Failed to start GitHub connection'),
+      onError: (err) => {
+        const message =
+          (err as { message?: string })?.message ?? 'Failed to start GitHub connection';
+        toast.error(message);
+      },
     });
   };
 

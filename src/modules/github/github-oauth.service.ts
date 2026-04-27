@@ -4,10 +4,23 @@ const GITHUB_AUTH_URL = 'https://github.com/login/oauth/authorize';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const GITHUB_USER_URL = 'https://api.github.com/user';
 
+export class GitHubOAuthConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GitHubOAuthConfigError';
+  }
+}
+
 export const GitHubOAuthService = {
   getAuthUrl(state: string): string {
+    const clientId = env.GITHUB_CLIENT_ID;
+    if (!clientId || clientId.trim() === '') {
+      throw new GitHubOAuthConfigError(
+        'GitHub integration is not configured (missing GITHUB_CLIENT_ID). Ask an admin to set it up.',
+      );
+    }
     const params = new URLSearchParams({
-      client_id: env.GITHUB_CLIENT_ID,
+      client_id: clientId,
       redirect_uri: `${env.NEXT_PUBLIC_APP_URL}/api/v1/auth/github/callback`,
       scope: 'read:user repo',
       state,
