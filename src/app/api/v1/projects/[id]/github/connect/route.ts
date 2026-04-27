@@ -35,7 +35,7 @@ export async function POST(
   } catch (err) {
     if (err instanceof GitHubOAuthConfigError) {
       return NextResponse.json(
-        apiError('GITHUB_NOT_CONFIGURED', err.message),
+        apiError('INTERNAL_ERROR', err.message),
         { status: 503 },
       );
     }
