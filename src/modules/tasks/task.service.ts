@@ -297,6 +297,14 @@ export const TaskService = {
     return { total, done, inProgress, backlog, percentage };
   },
 
+  async showAllToClient(projectId: string) {
+    const result = await Task.updateMany(
+      { project: projectId, clientVisible: { $ne: true } },
+      { $set: { clientVisible: true } },
+    );
+    return { updated: result.modifiedCount ?? 0 };
+  },
+
   async getMyTasks(userId: string, options: { includeDone?: boolean } = {}) {
     const filter: Record<string, unknown> = { assignees: userId };
     if (!options.includeDone) {

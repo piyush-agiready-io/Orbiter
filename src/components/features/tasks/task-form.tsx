@@ -36,6 +36,7 @@ const formSchema = z.object({
   status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']),
   epicId: z.string().optional(),
   sprintId: z.string().optional(),
+  clientVisible: z.boolean(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -73,6 +74,7 @@ export function TaskForm({
       priority: 'P2',
       status: defaultStatus as FormValues['status'],
       sprintId: defaultSprintId,
+      clientVisible: true,
     },
   });
 
@@ -85,6 +87,7 @@ export function TaskForm({
         priority: 'P2',
         status: defaultStatus as FormValues['status'],
         sprintId: defaultSprintId,
+        clientVisible: true,
       });
       setSelectedAssignees([]);
     }
@@ -224,6 +227,21 @@ export function TaskForm({
               </Select>
             )}
           </div>
+
+          <label className="flex items-start gap-2.5 rounded-md border border-subtle bg-subtle/30 px-3 py-2.5 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.watch('clientVisible')}
+              onChange={(e) => form.setValue('clientVisible', e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-default text-accent focus:ring-accent/20"
+            />
+            <div className="flex-1">
+              <span className="font-medium text-primary">Visible to client</span>
+              <p className="text-xs text-muted">
+                Clients in this project can see this task in their portal. Uncheck for internal-only work.
+              </p>
+            </div>
+          </label>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>

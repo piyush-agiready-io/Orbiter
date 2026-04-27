@@ -12,7 +12,7 @@ export const createTaskSchema = z.object({
   sprintId: objectId.optional(),
   assigneeIds: z.array(objectId).default([]),
   tags: z.array(z.string().trim()).default([]),
-  clientVisible: z.boolean().default(false),
+  clientVisible: z.boolean().default(true),
 });
 
 export const updateTaskSchema = z.object({

@@ -151,6 +151,25 @@ export function TaskDetailPanel({ taskId, projectId, onClose }: TaskDetailPanelP
               </div>
             </div>
           )}
+
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={task.clientVisible}
+              onChange={(e) => handleUpdate({ clientVisible: e.target.checked })}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-default text-accent focus:ring-accent/20"
+            />
+            <div className="flex-1">
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+                Visible to client
+              </span>
+              <p className="text-xs text-secondary">
+                {task.clientVisible
+                  ? 'Shows in the client portal.'
+                  : 'Hidden from the client portal.'}
+              </p>
+            </div>
+          </label>
         </div>
 
         <div className="border-t border-[var(--color-border-subtle)] pt-3">

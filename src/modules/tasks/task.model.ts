@@ -49,7 +49,7 @@ const taskSchema = new Schema<TaskDocument>(
     sprint: { type: Schema.Types.ObjectId, ref: 'Sprint' },
     assignees: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     tags: { type: [String], default: [] },
-    clientVisible: { type: Boolean, default: false },
+    clientVisible: { type: Boolean, default: true },
     linkedBugs: [{ type: Schema.Types.ObjectId, ref: 'Bug' }],
     order: { type: Number, default: 0 },
   },

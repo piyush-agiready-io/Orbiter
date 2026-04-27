@@ -361,6 +361,40 @@ export default function ProjectSettingsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Client visibility helper */}
+      {isAdmin && (
+        <div className="mt-6 rounded-lg border border-subtle bg-surface p-6">
+          <h3 className="text-sm font-semibold text-primary">Client Portal Visibility</h3>
+          <p className="mt-1 text-sm text-secondary">
+            By default new tasks are visible to clients in their portal. Use the checkbox on each
+            task to hide internal-only work. If clients on this project can&apos;t see existing
+            tasks, run a one-time backfill below.
+          </p>
+          <Button
+            variant="secondary"
+            className="mt-3"
+            onClick={() => {
+              api
+                .post<{ updated: number }>(
+                  `/projects/${params.id}/tasks/show-all-to-client`,
+                )
+                .then((res) => {
+                  const updated = (res as { updated?: number })?.updated ?? 0;
+                  toast.success(
+                    updated === 0
+                      ? 'All tasks were already visible to clients.'
+                      : `${updated} task${updated === 1 ? ' is' : 's are'} now visible to clients.`,
+                  );
+                  queryClient.invalidateQueries({ queryKey: ['tasks', params.id] });
+                })
+                .catch(() => toast.error('Could not update visibility'));
+            }}
+          >
+            Show all existing tasks to client
+          </Button>
+        </div>
+      )}
+
       {/* Invite Client Dialog */}
       <Dialog open={inviteClientOpen} onOpenChange={(v) => !v && closeInviteClient()}>
         <DialogContent className="bg-surface border-[var(--color-border-subtle)] sm:max-w-md">
