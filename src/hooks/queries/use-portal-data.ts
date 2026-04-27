@@ -16,6 +16,7 @@ export interface PortalOverview {
     goal?: string;
     startDate: string;
     endDate: string;
+    status: 'planning' | 'active' | 'closed';
     progress: { total: number; done: number; percentage: number } | null;
   } | null;
   bugs: { open: number };

@@ -9,6 +9,7 @@ import {
   Sparkle,
   CheckCircle,
   WarningCircle,
+  Timer,
 } from '@phosphor-icons/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -94,73 +95,8 @@ export default function PortalProjectOverviewPage() {
       />
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Active Sprint */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Play size={16} weight="fill" className="text-[var(--color-accent)]" />
-              Current Sprint
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activeSprint ? (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm font-medium text-primary">
-                    {activeSprint.name}
-                  </p>
-                  {activeSprint.goal && (
-                    <p className="mt-0.5 text-sm text-secondary">
-                      {activeSprint.goal}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted">
-                  <span>
-                    {format(new Date(activeSprint.startDate), 'MMM d')} –{' '}
-                    {format(new Date(activeSprint.endDate), 'MMM d, yyyy')}
-                  </span>
-                  <span
-                    className={
-                      sprintDaysLeft < 0
-                        ? 'text-[var(--color-error)]'
-                        : sprintDaysLeft <= 2
-                          ? 'text-[var(--color-warning)]'
-                          : ''
-                    }
-                  >
-                    {sprintDaysLeft > 0
-                      ? `${sprintDaysLeft} day${sprintDaysLeft === 1 ? '' : 's'} left`
-                      : sprintDaysLeft === 0
-                        ? 'Ends today'
-                        : `${Math.abs(sprintDaysLeft)} day${Math.abs(sprintDaysLeft) === 1 ? '' : 's'} overdue`}
-                  </span>
-                </div>
-                {activeSprint.progress && activeSprint.progress.total > 0 && (
-                  <div>
-                    <div className="mb-1 flex items-center justify-between text-xs text-secondary">
-                      <span>Sprint progress</span>
-                      <span>
-                        {activeSprint.progress.done}/{activeSprint.progress.total} ·{' '}
-                        {activeSprint.progress.percentage}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-accent-muted">
-                      <div
-                        className="h-2 rounded-full bg-accent transition-all duration-300"
-                        style={{ width: `${activeSprint.progress.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="py-6 text-center text-sm text-muted">
-                No sprint is active right now.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        {/* Sprint card */}
+        <SprintCard sprint={activeSprint} daysLeft={sprintDaysLeft} />
 
         {/* Bugs you've reported */}
         <Card>
@@ -257,5 +193,127 @@ export default function PortalProjectOverviewPage() {
         onClose={() => setBugDialogOpen(false)}
       />
     </div>
+  );
+}
+
+interface SprintCardProps {
+  sprint: {
+    id: string;
+    name: string;
+    goal?: string;
+    startDate: string;
+    endDate: string;
+    status: 'planning' | 'active' | 'closed';
+    progress: { total: number; done: number; percentage: number } | null;
+  } | null;
+  daysLeft: number;
+}
+
+const SPRINT_BADGE: Record<
+  'planning' | 'active' | 'closed',
+  { label: string; tint: string; icon: React.ReactNode }
+> = {
+  planning: {
+    label: 'Upcoming',
+    tint: 'bg-[var(--color-info-muted)] text-[var(--color-info)]',
+    icon: <Timer size={12} />,
+  },
+  active: {
+    label: 'Active',
+    tint: 'bg-[var(--color-accent-muted)] text-[var(--color-accent-text)]',
+    icon: <Play size={12} weight="fill" />,
+  },
+  closed: {
+    label: 'Closed',
+    tint: 'bg-[var(--color-success-muted)] text-[var(--color-success)]',
+    icon: <CheckCircle size={12} weight="fill" />,
+  },
+};
+
+function SprintCard({ sprint, daysLeft }: SprintCardProps) {
+  const headline = !sprint
+    ? 'Sprint'
+    : sprint.status === 'active'
+      ? 'Current Sprint'
+      : sprint.status === 'planning'
+        ? 'Upcoming Sprint'
+        : 'Last Sprint';
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Play size={16} weight="fill" className="text-[var(--color-accent)]" />
+          {headline}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {sprint ? (
+          <div className="space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-primary truncate">
+                  {sprint.name}
+                </p>
+                {sprint.goal && (
+                  <p className="mt-0.5 text-sm text-secondary">{sprint.goal}</p>
+                )}
+              </div>
+              <Badge className={`shrink-0 ${SPRINT_BADGE[sprint.status].tint}`}>
+                <span className="mr-1">{SPRINT_BADGE[sprint.status].icon}</span>
+                {SPRINT_BADGE[sprint.status].label}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted">
+              <span>
+                {format(new Date(sprint.startDate), 'MMM d')} –{' '}
+                {format(new Date(sprint.endDate), 'MMM d, yyyy')}
+              </span>
+              {sprint.status === 'active' && (
+                <span
+                  className={
+                    daysLeft < 0
+                      ? 'text-[var(--color-error)]'
+                      : daysLeft <= 2
+                        ? 'text-[var(--color-warning)]'
+                        : ''
+                  }
+                >
+                  {daysLeft > 0
+                    ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`
+                    : daysLeft === 0
+                      ? 'Ends today'
+                      : `${Math.abs(daysLeft)} day${Math.abs(daysLeft) === 1 ? '' : 's'} overdue`}
+                </span>
+              )}
+              {sprint.status === 'planning' && (
+                <span>Starts {format(new Date(sprint.startDate), 'MMM d')}</span>
+              )}
+            </div>
+            {sprint.progress && sprint.progress.total > 0 && (
+              <div>
+                <div className="mb-1 flex items-center justify-between text-xs text-secondary">
+                  <span>Sprint progress</span>
+                  <span>
+                    {sprint.progress.done}/{sprint.progress.total} ·{' '}
+                    {sprint.progress.percentage}%
+                  </span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-accent-muted">
+                  <div
+                    className="h-2 rounded-full bg-accent transition-all duration-300"
+                    style={{ width: `${sprint.progress.percentage}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-muted">
+            No sprints created for this project yet.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
