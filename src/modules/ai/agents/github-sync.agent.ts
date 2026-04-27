@@ -12,15 +12,24 @@ interface SyncResult {
   statusUpdates: number;
 }
 
-const SUMMARY_INSTRUCTIONS = `You are a development team digest writer for the Orbiter project management platform. You will receive:
-1. NEW commits and PRs from the latest sync
-2. PREVIOUS sync history for context
+const SUMMARY_INSTRUCTIONS = `You are a development team digest writer for the Orbiter project management platform. You will receive NEW commits and PRs from the latest sync and PREVIOUS sync summaries for context.
 
-Write a clear summary with two sections:
-- "Latest Activity" (2-3 sentences): What was just synced — features shipped, bugs fixed, PRs merged. Be specific about what changed.
-- "Recent History" (1-2 sentences): Brief context from previous syncs to show trajectory and momentum.
+Output a single JSON object (no prose, no markdown fences) with this exact shape:
+{
+  "headline": "<one short sentence, <= 90 chars, summarizing what just shipped>",
+  "highlights": ["<bullet 1>", "<bullet 2>", "<bullet 3>"],
+  "shipped": ["<merged PR title or completed work, plain text>"],
+  "in_progress": ["<open PR title or work-in-flight, plain text>"],
+  "trajectory": "<one short sentence, <= 100 chars, on momentum compared to previous syncs>"
+}
 
-Use plain language a project manager would understand. Group related work together. Mention merged PRs by title. Do not list individual commits — synthesize the work.`;
+Rules:
+- Each highlights bullet is 6–14 words. Synthesize, don't list individual commits.
+- shipped[] = merged PRs and completed work. Empty array if none.
+- in_progress[] = open PRs and work-in-flight. Empty array if none.
+- Use plain text only. No markdown, no emojis, no quote marks around bullets.
+- If something is unknown or empty, return an empty array or empty string. Never invent data.
+- Output JSON only. Nothing else.`;
 
 export const GitHubSyncAgent = {
   async syncProject(

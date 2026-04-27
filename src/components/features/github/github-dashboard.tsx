@@ -292,16 +292,12 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
 
       {/* AI Summary */}
       {latestSummary?.summary && (
-        <div className="rounded-lg border border-subtle bg-surface p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkle size={16} weight="fill" className="text-accent" />
-            <h3 className="text-sm font-semibold text-primary">Latest AI Summary</h3>
-          </div>
-          <p className="text-sm text-secondary leading-relaxed">{latestSummary.summary}</p>
-          <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-            {latestSummary.commits.length} commits, {latestSummary.pullRequests.length} PRs — {formatDistanceToNow(new Date(latestSummary.createdAt), { addSuffix: true })}
-          </p>
-        </div>
+        <AiSummaryCard
+          summary={latestSummary.summary}
+          commitCount={latestSummary.commits.length}
+          prCount={latestSummary.pullRequests.length}
+          createdAt={latestSummary.createdAt}
+        />
       )}
 
       {/* README Overview */}
@@ -511,6 +507,162 @@ function RepoSearchInput({
             )}
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+interface ParsedSummary {
+  headline?: string;
+  highlights?: string[];
+  shipped?: string[];
+  in_progress?: string[];
+  trajectory?: string;
+}
+
+function tryParseSummary(raw: string): ParsedSummary | null {
+  const trimmed = raw.trim();
+  // Strip ```json fences if the model added them
+  const cleaned = trimmed
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+  if (!cleaned.startsWith('{')) return null;
+  try {
+    const parsed = JSON.parse(cleaned) as ParsedSummary;
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+interface AiSummaryCardProps {
+  summary: string;
+  commitCount: number;
+  prCount: number;
+  createdAt: string;
+}
+
+function AiSummaryCard({
+  summary,
+  commitCount,
+  prCount,
+  createdAt,
+}: AiSummaryCardProps) {
+  const parsed = tryParseSummary(summary);
+
+  if (!parsed) {
+    // Older summaries or AI didn't comply — fall back to prose, but keep the
+    // header consistent with the structured layout.
+    return (
+      <div className="rounded-lg border border-subtle bg-surface p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Sparkle size={16} weight="fill" className="text-accent" />
+          <h3 className="text-sm font-semibold text-primary">Latest AI Summary</h3>
+        </div>
+        <p className="text-sm text-secondary leading-relaxed whitespace-pre-wrap">
+          {summary}
+        </p>
+        <p className="mt-3 text-xs text-muted">
+          {commitCount} commits, {prCount} PRs —{' '}
+          {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
+        </p>
+      </div>
+    );
+  }
+
+  const highlights = parsed.highlights ?? [];
+  const shipped = parsed.shipped ?? [];
+  const inProgress = parsed.in_progress ?? [];
+  const showShipped = shipped.length > 0;
+  const showInProgress = inProgress.length > 0;
+  const twoCol = showShipped && showInProgress;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-accent/20 bg-accent-muted/30 p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Sparkle size={16} weight="fill" className="text-accent" />
+          <h3 className="text-sm font-semibold text-primary">Latest AI Summary</h3>
+        </div>
+        {parsed.headline && (
+          <p className="text-base font-medium text-primary leading-snug">
+            {parsed.headline}
+          </p>
+        )}
+        {highlights.length > 0 && (
+          <ul className="mt-3 space-y-1.5">
+            {highlights.map((h, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-2 text-sm text-secondary"
+              >
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent)]" />
+                <span>{h}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-3 text-xs text-muted">
+          {commitCount} commits, {prCount} PRs —{' '}
+          {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
+        </p>
+      </div>
+
+      {(showShipped || showInProgress) && (
+        <div className={`grid gap-3 ${twoCol ? 'md:grid-cols-2' : ''}`}>
+          {showShipped && (
+            <div className="rounded-lg border border-subtle bg-surface p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <CheckCircle
+                  size={14}
+                  weight="fill"
+                  className="text-[var(--color-success)]"
+                />
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                  Shipped
+                </h4>
+              </div>
+              <ul className="space-y-1.5">
+                {shipped.map((s, i) => (
+                  <li key={i} className="text-sm text-primary leading-snug">
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {showInProgress && (
+            <div className="rounded-lg border border-subtle bg-surface p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <CircleNotch
+                  size={14}
+                  className="text-[var(--color-warning)]"
+                />
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                  In Flight
+                </h4>
+              </div>
+              <ul className="space-y-1.5">
+                {inProgress.map((s, i) => (
+                  <li key={i} className="text-sm text-primary leading-snug">
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {parsed.trajectory && (
+        <div className="rounded-lg border border-subtle bg-surface px-4 py-3">
+          <p className="text-xs uppercase tracking-wide text-muted mb-1">
+            Trajectory
+          </p>
+          <p className="text-sm text-secondary">{parsed.trajectory}</p>
+        </div>
       )}
     </div>
   );

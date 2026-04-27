@@ -51,9 +51,9 @@
 
     /* Text */
     --color-text-primary: #1C1C22;
-    --color-text-secondary: #4A4A57;
-    --color-text-muted: #71717F;
-    --color-text-disabled: #B4B4C0;
+    --color-text-secondary: #3F3F4A;
+    --color-text-muted: #565666;
+    --color-text-disabled: #8B8B9A;
     --color-text-inverse: #FAFAFA;
 
     /* Border */
@@ -139,9 +139,9 @@
 
     /* Text */
     --color-text-primary: #F0F0F3;
-    --color-text-secondary: #B0B0BC;
-    --color-text-muted: #8A8A96;
-    --color-text-disabled: #4A4A54;
+    --color-text-secondary: #C8C8D2;
+    --color-text-muted: #A8A8B5;
+    --color-text-disabled: #6A6A78;
     --color-text-inverse: #1C1C22;
 
     /* Border */

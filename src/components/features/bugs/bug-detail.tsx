@@ -1,17 +1,37 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Trash, LinkSimple, Globe, Camera, Terminal } from '@phosphor-icons/react';
+import {
+  ArrowLeft,
+  Trash,
+  LinkSimple,
+  Globe,
+  Camera,
+  Terminal,
+  Kanban,
+  ArrowRight,
+  X,
+} from '@phosphor-icons/react';
 import Avatar from 'boring-avatars';
 import { toast } from 'sonner';
-import { useBug, useUpdateBug, useDeleteBug } from '@/hooks/queries/use-bugs';
+import {
+  useBug,
+  useUpdateBug,
+  useDeleteBug,
+  useLinkBug,
+  useConvertBugToTask,
+} from '@/hooks/queries/use-bugs';
+import { useTasks } from '@/hooks/queries/use-tasks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CommentList } from '@/components/features/comments/comment-list';
 import { CommentInput } from '@/components/features/comments/comment-input';
+import type { ITask } from '@/modules/tasks/task.types';
 
 const PRIORITY_STYLES: Record<string, string> = {
   P0: 'bg-[var(--color-p0-muted)] text-[var(--color-p0)]',
@@ -35,7 +55,7 @@ interface BugData {
   status: string;
   source: string;
   reporter: { name: string; email: string; avatar?: string };
-  task?: { title: string; status: string };
+  task?: { id?: string; _id?: string; title: string; status: string };
   metadata: {
     url?: string;
     device?: string;
@@ -64,6 +84,9 @@ export function BugDetail({ projectId, bugId }: { projectId: string; bugId: stri
   const { data, isLoading } = useBug(bugId);
   const updateBug = useUpdateBug(projectId);
   const deleteBug = useDeleteBug(projectId);
+  const linkBug = useLinkBug(projectId);
+  const convertBug = useConvertBugToTask(projectId);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
 
   const bug = data as BugData | undefined;
 
@@ -117,9 +140,39 @@ export function BugDetail({ projectId, bugId }: { projectId: string; bugId: stri
           <ArrowLeft size={14} data-icon="inline-start" />
           Back to bugs
         </Button>
-        <Button variant="ghost" size="icon-sm" onClick={handleDelete}>
-          <Trash size={16} className="text-[var(--color-error)]" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {!bug.task && (
+            <>
+              <Button
+                size="sm"
+                onClick={() =>
+                  convertBug.mutate(bugId, {
+                    onSuccess: (result) => {
+                      const r = result as { taskId: string; projectId: string };
+                      toast.success('Bug converted to a task');
+                      router.push(`/projects/${r.projectId}/board?task=${r.taskId}`);
+                    },
+                  })
+                }
+                disabled={convertBug.isPending}
+              >
+                <Kanban size={14} className="mr-1.5" />
+                {convertBug.isPending ? 'Converting…' : 'Convert to Task'}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setLinkDialogOpen(true)}
+              >
+                <LinkSimple size={14} className="mr-1.5" />
+                Link Existing Task
+              </Button>
+            </>
+          )}
+          <Button variant="ghost" size="icon-sm" onClick={handleDelete}>
+            <Trash size={16} className="text-[var(--color-error)]" />
+          </Button>
+        </div>
       </div>
 
       <div className="mt-4">
@@ -286,10 +339,39 @@ export function BugDetail({ projectId, bugId }: { projectId: string; bugId: stri
                 <>
                   <Separator />
                   <div>
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted">Linked Task</span>
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <LinkSimple size={14} className="text-muted" />
-                      <span className="text-sm text-[var(--color-accent-text)]">{bug.task.title}</span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-muted">
+                      Linked Task
+                    </span>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const taskId = bug.task?.id ?? bug.task?._id;
+                          if (taskId) {
+                            router.push(
+                              `/projects/${projectId}/board?task=${taskId}`,
+                            );
+                          }
+                        }}
+                        className="flex flex-1 items-center gap-1.5 text-left text-sm text-[var(--color-accent-text)] hover:underline"
+                      >
+                        <LinkSimple size={14} className="shrink-0" />
+                        <span className="truncate">{bug.task.title}</span>
+                        <ArrowRight size={12} className="shrink-0" />
+                      </button>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        title="Unlink"
+                        onClick={() =>
+                          linkBug.mutate(
+                            { bugId, taskId: null },
+                            { onSuccess: () => toast.success('Task unlinked') },
+                          )
+                        }
+                      >
+                        <X size={12} />
+                      </Button>
                     </div>
                   </div>
                 </>
@@ -307,6 +389,83 @@ export function BugDetail({ projectId, bugId }: { projectId: string; bugId: stri
           </div>
         </div>
       </div>
+
+      <LinkTaskDialog
+        projectId={projectId}
+        open={linkDialogOpen}
+        onClose={() => setLinkDialogOpen(false)}
+        onPick={(taskId) => {
+          linkBug.mutate(
+            { bugId, taskId },
+            {
+              onSuccess: () => {
+                setLinkDialogOpen(false);
+                toast.success('Bug linked to task');
+              },
+            },
+          );
+        }}
+      />
     </div>
+  );
+}
+
+interface LinkTaskDialogProps {
+  projectId: string;
+  open: boolean;
+  onClose: () => void;
+  onPick: (taskId: string) => void;
+}
+
+function LinkTaskDialog({ projectId, open, onClose, onPick }: LinkTaskDialogProps) {
+  const { data, isLoading } = useTasks(projectId, { limit: '200' });
+  const tasks = (data?.tasks ?? []) as ITask[];
+  const [search, setSearch] = useState('');
+  const filtered = search.trim()
+    ? tasks.filter((t) => t.title.toLowerCase().includes(search.trim().toLowerCase()))
+    : tasks.slice(0, 30);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-surface border-[var(--color-border-subtle)] sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-base font-semibold text-primary">
+            Link to Existing Task
+          </DialogTitle>
+        </DialogHeader>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tasks…"
+          className="h-9 w-full rounded-md border border-default bg-surface px-3 text-sm text-primary placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+        />
+        <div className="max-h-[50vh] overflow-y-auto rounded-md border border-subtle">
+          {isLoading ? (
+            <div className="p-6 text-center text-sm text-muted">Loading…</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted">No tasks match.</div>
+          ) : (
+            <ul className="divide-y divide-subtle">
+              {filtered.map((t) => (
+                <li key={t.id}>
+                  <button
+                    type="button"
+                    onClick={() => onPick(t.id)}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-subtle"
+                  >
+                    <Badge className="shrink-0">{t.priority}</Badge>
+                    <span className="flex-1 text-sm text-primary truncate">{t.title}</span>
+                    <span className="shrink-0 text-xs text-muted capitalize">
+                      {t.status.replace('_', ' ')}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

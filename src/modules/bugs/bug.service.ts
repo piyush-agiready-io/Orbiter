@@ -112,6 +112,38 @@ export const BugService = {
     return bug;
   },
 
+  async convertToTask(bugId: string, userId: string) {
+    const bug = await Bug.findById(bugId);
+    if (!bug) throw new NotFoundError('Bug');
+
+    const { TaskService } = await import('@/modules/tasks/task.service');
+    const taskTitle = `[Bug] ${bug.title}`;
+    const description = [
+      bug.description ?? '',
+      bug.metadata?.url ? `\n\n**Reported on:** ${bug.metadata.url}` : '',
+    ]
+      .filter(Boolean)
+      .join('');
+
+    const task = await TaskService.create(
+      String(bug.project),
+      {
+        title: taskTitle,
+        description,
+        type: 'feature',
+        priority: bug.priority,
+        status: 'todo',
+        assigneeIds: [],
+        tags: ['bug'],
+        clientVisible: true,
+      } as Parameters<typeof TaskService.create>[1],
+      userId,
+    );
+
+    await this.linkToTask(bugId, String(task._id));
+    return { taskId: String(task._id), projectId: String(bug.project) };
+  },
+
   async linkToTask(bugId: string, taskId: string | null) {
     const bug = await Bug.findById(bugId);
     if (!bug) {

@@ -69,3 +69,19 @@ export function useLinkBug(projectId: string) {
     },
   });
 }
+
+export function useConvertBugToTask(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (bugId: string) =>
+      api.post<{ taskId: string; projectId: string }>(
+        `/bugs/${bugId}/convert-to-task`,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bugs', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['bug'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
+    },
+  });
+}
