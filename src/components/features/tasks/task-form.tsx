@@ -181,9 +181,11 @@ export function TaskForm({
               <Label className="text-sm font-medium text-primary">Epic</Label>
               <Select
                 value={form.watch('epicId') ?? '__none__'}
-                onValueChange={(v) =>
-                  form.setValue('epicId', v === '__none__' ? undefined : v)
-                }
+                onValueChange={(v) => {
+                  const next: string | undefined =
+                    !v || v === '__none__' ? undefined : (v as string);
+                  form.setValue('epicId', next);
+                }}
               >
                 <SelectTrigger className="mt-1.5">
                   <SelectValue placeholder="None" />
