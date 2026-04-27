@@ -15,7 +15,7 @@ export const PATCH = apiHandler({
   validate: { body: updateBugSchema },
   handler: async (_req, ctx) => {
     const body = ctx.body as UpdateBugInput;
-    const bug = await BugService.update(ctx.params.id, body);
+    const bug = await BugService.update(ctx.params.id, body, ctx.user.userId);
     return { data: bug.toJSON() };
   },
 });

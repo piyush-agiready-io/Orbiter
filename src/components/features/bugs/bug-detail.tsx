@@ -23,6 +23,7 @@ import {
   useConvertBugToTask,
 } from '@/hooks/queries/use-bugs';
 import { useTasks } from '@/hooks/queries/use-tasks';
+import { useUsers } from '@/hooks/queries/use-users';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -55,6 +56,7 @@ interface BugData {
   status: string;
   source: string;
   reporter: { name: string; email: string; avatar?: string };
+  assignee?: { id?: string; _id?: string; name: string; email: string; avatar?: string } | null;
   task?: { id?: string; _id?: string; title: string; status: string };
   metadata: {
     url?: string;
@@ -86,9 +88,16 @@ export function BugDetail({ projectId, bugId }: { projectId: string; bugId: stri
   const deleteBug = useDeleteBug(projectId);
   const linkBug = useLinkBug(projectId);
   const convertBug = useConvertBugToTask(projectId);
+  const { data: usersData } = useUsers();
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
 
   const bug = data as BugData | undefined;
+  const teamMembers = (
+    (usersData as { users?: { id: string; name: string; email: string; role: string; inviteStatus?: string }[] })?.users ?? []
+  ).filter((u) => u.role !== 'client' && u.inviteStatus === 'active');
+  const currentAssigneeId = bug?.assignee
+    ? bug.assignee.id ?? bug.assignee._id ?? null
+    : null;
 
   if (isLoading) {
     return (
@@ -110,6 +119,19 @@ export function BugDetail({ projectId, bugId }: { projectId: string; bugId: stri
   function handlePriorityChange(priority: string | null) {
     if (!priority) return;
     updateBug.mutate({ bugId, data: { priority } });
+  }
+
+  function handleAssigneeChange(value: string) {
+    const assigneeId = value === '__none__' ? null : value;
+    updateBug.mutate(
+      { bugId, data: { assigneeId } },
+      {
+        onSuccess: () => {
+          if (assigneeId) toast.success('Bug assigned');
+          else toast.success('Assignee removed');
+        },
+      },
+    );
   }
 
   function handleDelete() {
@@ -334,6 +356,34 @@ export function BugDetail({ projectId, bugId }: { projectId: string; bugId: stri
                   </div>
                   <span className="text-sm text-secondary">{bug.reporter.name}</span>
                 </div>
+              </div>
+              <Separator />
+              <div>
+                <span className="text-xs font-medium uppercase tracking-wide text-muted">Assignee</span>
+                {bug.assignee && (
+                  <div className="mt-1 mb-1.5 flex items-center gap-2">
+                    <div className="h-5 w-5 overflow-hidden rounded-full">
+                      <Avatar size={20} variant="beam" name={bug.assignee.name} colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9']} />
+                    </div>
+                    <span className="text-sm text-secondary truncate">{bug.assignee.name}</span>
+                  </div>
+                )}
+                <Select
+                  value={currentAssigneeId ?? '__none__'}
+                  onValueChange={handleAssigneeChange}
+                >
+                  <SelectTrigger size="sm" className="mt-1 w-full">
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Unassigned</SelectItem>
+                    {teamMembers.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {bug.task && (
                 <>

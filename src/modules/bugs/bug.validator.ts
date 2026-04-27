@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const objectId = z.string().regex(/^[a-f\d]{24}$/i);
+
 export const createBugSchema = z.object({
   title: z.string().min(1).max(200).trim(),
   description: z.string().max(5000).optional(),
@@ -29,6 +31,7 @@ export const updateBugSchema = z.object({
   description: z.string().max(5000).optional(),
   priority: z.enum(['P0', 'P1', 'P2', 'P3']).optional(),
   status: z.enum(['open', 'investigating', 'resolved', 'closed']).optional(),
+  assigneeId: objectId.nullable().optional(),
   metadata: z
     .object({
       url: z.string().url().optional(),

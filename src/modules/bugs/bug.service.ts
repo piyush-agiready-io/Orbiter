@@ -73,6 +73,7 @@ export const BugService = {
     const [bugs, total] = await Promise.all([
       Bug.find(filter)
         .populate('reporter', 'name email avatar')
+        .populate('assignee', 'name email avatar')
         .skip(skip)
         .limit(limit)
         .sort(sort),
@@ -85,6 +86,7 @@ export const BugService = {
   async getById(id: string) {
     const bug = await Bug.findById(id)
       .populate('reporter', 'name email avatar')
+      .populate('assignee', 'name email avatar')
       .populate('task', 'title status');
     if (!bug) {
       throw new NotFoundError('Bug');
@@ -92,15 +94,53 @@ export const BugService = {
     return bug;
   },
 
-  async update(id: string, data: UpdateBugInput) {
-    const bug = await Bug.findByIdAndUpdate(
-      id,
-      { $set: data },
-      { returnDocument: 'after', runValidators: true },
-    );
-    if (!bug) {
-      throw new NotFoundError('Bug');
+  async update(id: string, data: UpdateBugInput, actorId?: string) {
+    const { assigneeId, ...rest } = data;
+    const update: Record<string, unknown> = { ...rest };
+    const unset: Record<string, 1> = {};
+    if (assigneeId !== undefined) {
+      if (assigneeId === null) {
+        unset.assignee = 1;
+      } else {
+        update.assignee = assigneeId;
+      }
     }
+
+    const before = await Bug.findById(id).select('assignee title project').lean();
+    if (!before) throw new NotFoundError('Bug');
+
+    const mongoUpdate: Record<string, unknown> = {};
+    if (Object.keys(update).length > 0) mongoUpdate.$set = update;
+    if (Object.keys(unset).length > 0) mongoUpdate.$unset = unset;
+
+    const bug = await Bug.findByIdAndUpdate(id, mongoUpdate, {
+      returnDocument: 'after',
+      runValidators: true,
+    });
+    if (!bug) throw new NotFoundError('Bug');
+
+    const previousAssignee = before.assignee ? String(before.assignee) : null;
+    const newAssignee = assigneeId === null ? null : assigneeId ?? previousAssignee;
+    if (
+      assigneeId !== undefined &&
+      newAssignee &&
+      newAssignee !== previousAssignee &&
+      actorId
+    ) {
+      try {
+        const { NotificationService } = await import(
+          '@/modules/notifications/notification.service'
+        );
+        await NotificationService.notify(
+          newAssignee,
+          'bug_assigned',
+          'You were assigned a bug',
+          before.title,
+          `/projects/${String(before.project)}/bugs/${id}`,
+        );
+      } catch {}
+    }
+
     return bug;
   },
 
@@ -125,6 +165,8 @@ export const BugService = {
       .filter(Boolean)
       .join('');
 
+    const assigneeIds = bug.assignee ? [String(bug.assignee)] : [];
+
     const task = await TaskService.create(
       String(bug.project),
       {
@@ -133,7 +175,7 @@ export const BugService = {
         type: 'feature',
         priority: bug.priority,
         status: 'todo',
-        assigneeIds: [],
+        assigneeIds,
         tags: ['bug'],
         clientVisible: true,
       } as Parameters<typeof TaskService.create>[1],

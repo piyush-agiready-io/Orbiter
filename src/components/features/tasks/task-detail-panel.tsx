@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { useTask, useUpdateTask } from '@/hooks/queries/use-tasks';
 import { useEpics } from '@/hooks/queries/use-epics';
+import { useUsers } from '@/hooks/queries/use-users';
 import { format } from 'date-fns';
 import { CommentList } from '@/components/features/comments/comment-list';
 import { CommentInput } from '@/components/features/comments/comment-input';
@@ -25,11 +26,34 @@ interface TaskDetailPanelProps {
 export function TaskDetailPanel({ taskId, projectId, onClose }: TaskDetailPanelProps) {
   const { data: task, isLoading } = useTask(taskId);
   const { data: epicsData } = useEpics(projectId);
+  const { data: usersData } = useUsers();
   const updateTask = useUpdateTask(projectId);
+
+  const allUsers = (
+    (usersData as { users?: { id: string; name: string; email: string; role: string; inviteStatus?: string }[] })?.users ?? []
+  ).filter((u) => u.role !== 'client' && u.inviteStatus === 'active');
+
+  const currentAssigneeIds = (task?.assignees ?? [])
+    .map((a) => {
+      if (!a) return null;
+      if (typeof a === 'string') return a;
+      const obj = a as { id?: string; _id?: string };
+      return obj.id ?? obj._id ?? null;
+    })
+    .filter((id): id is string => Boolean(id));
 
   const handleUpdate = (data: Record<string, unknown>) => {
     updateTask.mutate({ taskId, data });
   };
+
+  const toggleAssignee = (userId: string) => {
+    const next = currentAssigneeIds.includes(userId)
+      ? currentAssigneeIds.filter((id) => id !== userId)
+      : [...currentAssigneeIds, userId];
+    handleUpdate({ assigneeIds: next });
+  };
+
+  const availableUsers = allUsers.filter((u) => !currentAssigneeIds.includes(u.id));
 
   if (isLoading || !task) {
     return (
@@ -96,23 +120,53 @@ export function TaskDetailPanel({ taskId, projectId, onClose }: TaskDetailPanelP
             <Badge variant="secondary">{task.type}</Badge>
           </div>
 
-          {task.assignees?.length > 0 && (
-            <div>
-              <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Assignees</span>
-              <div className="mt-1 space-y-1.5">
-                {task.assignees.map((a, i) => {
-                  const user = typeof a === 'string' ? null : (a as unknown as { name: string });
-                  if (!user) return null;
+          <div>
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Assignees</span>
+            <div className="mt-1.5 space-y-1.5">
+              {task.assignees?.length > 0 ? (
+                task.assignees.map((a, i) => {
+                  if (typeof a === 'string') return null;
+                  const user = a as unknown as { id?: string; _id?: string; name: string };
+                  const userId = user.id ?? user._id;
                   return (
-                    <div key={i} className="flex items-center gap-2">
-                      <Avatar size={20} name={user.name} variant="beam" colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#8B8B9A', '#2E7D57']} />
-                      <span className="text-sm text-primary">{user.name}</span>
+                    <div key={i} className="flex items-center justify-between gap-2 group">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Avatar size={20} name={user.name} variant="beam" colors={['#5B5FC7', '#4E52B0', '#E8E9F5', '#8B8B9A', '#2E7D57']} />
+                        <span className="text-sm text-primary truncate">{user.name}</span>
+                      </div>
+                      {userId && (
+                        <button
+                          type="button"
+                          onClick={() => toggleAssignee(userId)}
+                          className="rounded p-0.5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 hover:bg-subtle hover:text-primary transition-all"
+                          aria-label={`Remove ${user.name}`}
+                          disabled={updateTask.isPending}
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
                     </div>
                   );
-                })}
-              </div>
+                })
+              ) : (
+                <p className="text-xs text-[var(--color-text-muted)]">No one assigned yet.</p>
+              )}
+              {availableUsers.length > 0 && (
+                <Select value="" onValueChange={(v) => v && toggleAssignee(v)}>
+                  <SelectTrigger size="sm" className="w-full">
+                    <SelectValue placeholder="+ Add assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableUsers.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
-          )}
+          </div>
 
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Epic</span>

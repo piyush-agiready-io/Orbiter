@@ -21,11 +21,18 @@ interface SprintAiSuggestionsProps {
   projectId: string;
 }
 
+interface SuggestResponse {
+  suggestions: Suggestion[];
+  aiNotConnected?: boolean;
+  reason?: string;
+}
+
 export function SprintAiSuggestions({ projectId }: SprintAiSuggestionsProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiNotConnected, setAiNotConnected] = useState(false);
+  const [reason, setReason] = useState<string | null>(null);
   const [fetched, setFetched] = useState(false);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
 
@@ -35,22 +42,24 @@ export function SprintAiSuggestions({ projectId }: SprintAiSuggestionsProps) {
     setLoading(true);
     setError(null);
     setAiNotConnected(false);
+    setReason(null);
     setSuggestions([]);
     setAppliedIds(new Set());
 
     try {
-      const data = await api.get<{ suggestions: Suggestion[] }>(
+      const data = await api.get<SuggestResponse>(
         `/projects/${projectId}/sprints/suggest`,
       );
-      setSuggestions(data.suggestions);
+      if (data.aiNotConnected) {
+        setAiNotConnected(true);
+      } else {
+        setSuggestions(data.suggestions);
+        setReason(data.reason ?? null);
+      }
       setFetched(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to get suggestions';
-      if (message.toLowerCase().includes('chatgpt') || message.toLowerCase().includes('connect')) {
-        setAiNotConnected(true);
-      } else {
-        setError(message);
-      }
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -109,9 +118,19 @@ export function SprintAiSuggestions({ projectId }: SprintAiSuggestionsProps) {
       )}
 
       {fetched && suggestions.length === 0 && !loading && (
-        <div className="flex items-center gap-2 rounded-md bg-surface px-3 py-2 text-xs text-secondary">
-          <Sparkle size={14} />
-          <span>No suggestions available — either no backlog tasks or no active sprint.</span>
+        <div className="mt-2 flex items-start justify-between gap-3 rounded-md border border-subtle bg-surface px-3 py-2 text-xs text-secondary">
+          <div className="flex items-start gap-2">
+            <Sparkle size={14} className="mt-0.5 shrink-0" />
+            <span>{reason ?? 'No suggestions available right now.'}</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchSuggestions}
+            disabled={loading}
+          >
+            Retry
+          </Button>
         </div>
       )}
 

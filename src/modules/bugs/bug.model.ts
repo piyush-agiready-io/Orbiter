@@ -16,6 +16,7 @@ export interface BugDocument extends Document {
   source: BugSource;
   project: Schema.Types.ObjectId;
   reporter: Schema.Types.ObjectId;
+  assignee?: Schema.Types.ObjectId;
   task?: Schema.Types.ObjectId;
   metadata: {
     url?: string;
@@ -88,6 +89,10 @@ const bugSchema = new Schema<BugDocument>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    assignee: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
     },
     task: {
       type: Schema.Types.ObjectId,

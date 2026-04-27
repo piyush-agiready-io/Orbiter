@@ -1,5 +1,6 @@
 export const NOTIFICATION_TYPES = [
   'bug_created',
+  'bug_assigned',
   'task_assigned',
   'comment_mention',
   'sprint_closed',
