@@ -32,6 +32,7 @@ export function useCreateSprint(projectId: string) {
       api.post(`/projects/${projectId}/sprints`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
     },
   });
 }
@@ -43,6 +44,7 @@ export function useUpdateSprint(projectId: string) {
       api.patch(`/sprints/${sprintId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
     },
   });
 }
@@ -55,6 +57,7 @@ export function useCloseSprint(projectId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
     },
   });
 }

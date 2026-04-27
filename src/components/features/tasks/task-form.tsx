@@ -35,7 +35,6 @@ const formSchema = z.object({
   priority: z.enum(['P0', 'P1', 'P2', 'P3']),
   status: z.enum(['backlog', 'todo', 'in_progress', 'review', 'done']),
   epicId: z.string().optional(),
-  sprintId: z.string().optional(),
   clientVisible: z.boolean(),
 });
 
@@ -61,6 +60,11 @@ export function TaskForm({
   const { data: epicsData } = useEpics(projectId);
   const { data: usersData } = useUsers();
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [sprintId, setSprintId] = useState<string | undefined>(defaultSprintId);
+  const sprintLocked = !!defaultSprintId;
+  const lockedSprintName = sprintLocked
+    ? sprintsData?.sprints?.find((s) => s.id === defaultSprintId)?.name ?? 'Sprint'
+    : null;
 
   const allUsers = ((usersData as { users?: { id: string; name: string; email: string; role: string; inviteStatus?: string }[] })?.users ?? [])
     .filter((u) => u.role !== 'client' && u.inviteStatus === 'active');
@@ -73,7 +77,6 @@ export function TaskForm({
       type: 'feature',
       priority: 'P2',
       status: defaultStatus as FormValues['status'],
-      sprintId: defaultSprintId,
       clientVisible: true,
     },
   });
@@ -86,22 +89,27 @@ export function TaskForm({
         type: 'feature',
         priority: 'P2',
         status: defaultStatus as FormValues['status'],
-        sprintId: defaultSprintId,
         clientVisible: true,
       });
       setSelectedAssignees([]);
+      setSprintId(defaultSprintId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultStatus, defaultSprintId]);
 
   const onSubmit = (values: FormValues) => {
-    createTask.mutate({ ...values, assigneeIds: selectedAssignees }, {
-      onSuccess: () => {
-        form.reset();
-        setSelectedAssignees([]);
-        onClose();
+    const finalSprintId = defaultSprintId ?? sprintId;
+    createTask.mutate(
+      { ...values, sprintId: finalSprintId, assigneeIds: selectedAssignees },
+      {
+        onSuccess: () => {
+          form.reset();
+          setSelectedAssignees([]);
+          setSprintId(undefined);
+          onClose();
+        },
       },
-    });
+    );
   };
 
   const toggleAssignee = (userId: string) => {
@@ -171,27 +179,51 @@ export function TaskForm({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-sm font-medium text-primary">Epic</Label>
-              <Select value={form.watch('epicId') ?? ''} onValueChange={(v) => form.setValue('epicId', v || undefined)}>
-                <SelectTrigger className="mt-1.5"><SelectValue placeholder="None" /></SelectTrigger>
+              <Select
+                value={form.watch('epicId') ?? '__none__'}
+                onValueChange={(v) =>
+                  form.setValue('epicId', v === '__none__' ? undefined : v)
+                }
+              >
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {epicsData?.epics?.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.title}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label className="text-sm font-medium text-primary">Sprint</Label>
-              <Select value={form.watch('sprintId') ?? ''} onValueChange={(v) => form.setValue('sprintId', v || undefined)}>
-                <SelectTrigger className="mt-1.5"><SelectValue placeholder="None" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None</SelectItem>
-                  {sprintsData?.sprints?.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {sprintLocked ? (
+                <div className="mt-1.5 flex h-9 items-center rounded-md border border-subtle bg-subtle/40 px-3 text-sm text-primary">
+                  {lockedSprintName}
+                </div>
+              ) : (
+                <Select
+                  value={sprintId ?? '__none__'}
+                  onValueChange={(v) =>
+                    setSprintId(v === '__none__' ? undefined : v)
+                  }
+                >
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {sprintsData?.sprints?.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 

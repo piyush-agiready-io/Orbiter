@@ -117,18 +117,26 @@ export function TaskDetailPanel({ taskId, projectId, onClose }: TaskDetailPanelP
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Epic</span>
             <Select
-              value={(task as { epic?: string | { id?: string } }).epic
-                ? typeof (task as { epic?: string | { id?: string } }).epic === 'string'
-                  ? (task as { epic: string }).epic
-                  : ((task as { epic: { id?: string } }).epic.id ?? '')
-                : ''}
-              onValueChange={(v) => handleUpdate({ epicId: v || null })}
+              value={(() => {
+                const epic = (task as { epic?: string | { id?: string } }).epic;
+                if (!epic) return '__none__';
+                return typeof epic === 'string'
+                  ? epic
+                  : epic.id ?? '__none__';
+              })()}
+              onValueChange={(v) =>
+                handleUpdate({ epicId: v === '__none__' ? null : v })
+              }
             >
-              <SelectTrigger size="sm"><SelectValue placeholder="None" /></SelectTrigger>
+              <SelectTrigger size="sm">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="__none__">None</SelectItem>
                 {epicsData?.epics?.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.title}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -32,6 +32,7 @@ export function useCreateTask(projectId: string) {
       api.post(`/projects/${projectId}/tasks`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
     },
   });
 }
@@ -43,6 +44,7 @@ export function useUpdateTask(projectId: string) {
       api.patch(`/tasks/${taskId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
     },
   });
 }
@@ -54,6 +56,7 @@ export function useUpdateTaskStatus(projectId: string) {
       api.patch(`/tasks/${taskId}/status`, { status, order }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
     },
   });
 }
