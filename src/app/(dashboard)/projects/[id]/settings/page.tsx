@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Trash, UserPlus, Clock, CheckCircle, Warning } from '@phosphor-icons/react';
+import { Trash, UserPlus, Copy, CheckCircle, EnvelopeSimple } from '@phosphor-icons/react';
 import { useProject, useDeleteProject } from '@/hooks/queries/use-projects';
 import { useUsers } from '@/hooks/queries/use-users';
 import { useAuth } from '@/hooks/use-auth';
@@ -77,6 +77,10 @@ export default function ProjectSettingsPage() {
   const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [inviteClientOpen, setInviteClientOpen] = useState(false);
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientInviteToken, setClientInviteToken] = useState<string | null>(null);
+  const [clientInviteCopied, setClientInviteCopied] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [removingMember, setRemovingMember] = useState<{ id: string; name: string; role: string } | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -97,7 +101,10 @@ export default function ProjectSettingsPage() {
   ].filter(Boolean));
 
   const availableUsers = allUsers.filter(
-    (u) => !memberIds.has(u.id) && u.inviteStatus === 'active',
+    (u) =>
+      !memberIds.has(u.id) &&
+      u.inviteStatus === 'active' &&
+      u.role !== 'client',
   );
 
   const selectedUser = allUsers.find((u) => u.id === selectedUserId);
@@ -126,6 +133,47 @@ export default function ProjectSettingsPage() {
     },
     onError: () => toast.error('Failed to remove member'),
   });
+
+  const inviteClient = useMutation({
+    mutationFn: (email: string) =>
+      api.post<{ user: { name: string; email: string }; inviteToken?: string }>(
+        `/projects/${params.id}/clients`,
+        { email },
+      ),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['project', params.id] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      const data = result as { inviteToken?: string };
+      if (data?.inviteToken) {
+        setClientInviteToken(data.inviteToken);
+      } else {
+        setInviteClientOpen(false);
+        setClientEmail('');
+        toast.success('Client added to project');
+      }
+    },
+    onError: (err: unknown) => {
+      const message =
+        (err as { message?: string })?.message ?? 'Failed to invite client';
+      toast.error(message);
+    },
+  });
+
+  const closeInviteClient = () => {
+    setInviteClientOpen(false);
+    setClientEmail('');
+    setClientInviteToken(null);
+    setClientInviteCopied(false);
+  };
+
+  const handleCopyClientInvite = () => {
+    if (!clientInviteToken) return;
+    const link = `${window.location.origin}/register/${clientInviteToken}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setClientInviteCopied(true);
+      setTimeout(() => setClientInviteCopied(false), 2000);
+    });
+  };
 
   const updateProject = useMutation({
     mutationFn: (values: FormValues) => api.patch(`/projects/${params.id}`, values),
@@ -201,10 +249,16 @@ export default function ProjectSettingsPage() {
             </p>
           </div>
           {isAdmin && (
-            <Button variant="secondary" size="sm" onClick={() => setAddMemberOpen(true)}>
-              <UserPlus size={14} className="mr-1" />
-              Add Member
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setAddMemberOpen(true)}>
+                <UserPlus size={14} className="mr-1" />
+                Add Member
+              </Button>
+              <Button size="sm" onClick={() => setInviteClientOpen(true)}>
+                <EnvelopeSimple size={14} className="mr-1" />
+                Invite Client
+              </Button>
+            </div>
           )}
         </div>
 
@@ -304,6 +358,68 @@ export default function ProjectSettingsPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Client Dialog */}
+      <Dialog open={inviteClientOpen} onOpenChange={(v) => !v && closeInviteClient()}>
+        <DialogContent className="bg-surface border-[var(--color-border-subtle)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-primary">
+              Invite Client
+            </DialogTitle>
+          </DialogHeader>
+
+          {clientInviteToken ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 rounded-md bg-[var(--color-success-muted)] px-3 py-2">
+                <CheckCircle size={16} weight="fill" className="text-[var(--color-success)]" />
+                <p className="text-sm text-[var(--color-success)]">
+                  Invite sent. Share the link if the email doesn&apos;t arrive.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded-md bg-subtle px-3 py-2 text-xs text-primary break-all">
+                  {`${typeof window !== 'undefined' ? window.location.origin : ''}/register/${clientInviteToken}`}
+                </code>
+                <Button variant="ghost" size="icon-sm" onClick={handleCopyClientInvite}>
+                  {clientInviteCopied ? (
+                    <CheckCircle size={16} weight="fill" className="text-[var(--color-success)]" />
+                  ) : (
+                    <Copy size={16} />
+                  )}
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={closeInviteClient}>Done</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-secondary">
+                Clients get read-only portal access to this project only. They&apos;ll receive an email with a link to set their password.
+              </p>
+              <div>
+                <Label className="text-sm font-medium text-primary">Client email</Label>
+                <Input
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  placeholder="client@example.com"
+                  className="mt-1.5"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={closeInviteClient}>Cancel</Button>
+                <Button
+                  onClick={() => clientEmail && inviteClient.mutate(clientEmail.trim())}
+                  disabled={!clientEmail || inviteClient.isPending}
+                >
+                  {inviteClient.isPending ? 'Inviting…' : 'Send Invite'}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

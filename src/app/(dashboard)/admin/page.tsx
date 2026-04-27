@@ -133,7 +133,7 @@ export default function AdminPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold tracking-tight text-primary">Team Management</h1>
-            <InfoTip text="Invite users to the platform. Admins manage everything. Internal team members work on projects. Clients get read-only access to their assigned projects." />
+            <InfoTip text="Invite team members (Admins and Internal). New team members are automatically added to every project. Clients are invited from inside a specific project's Settings tab." />
           </div>
           <p className="mt-1 text-sm text-secondary">
             {users.length} members — {activeUsers.length} active, {pendingUsers.length} pending
@@ -275,9 +275,11 @@ export default function AdminPage() {
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="internal">Internal</SelectItem>
-                    <SelectItem value="client">Client</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="mt-1.5 text-xs text-muted">
+                  To invite a client, open the project they should access and use Invite Client in Settings.
+                </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { Project } from '@/modules/projects/project.model';
-import { NotFoundError } from '@/shared/middleware/api-handler';
+import { NotFoundError, ConflictError } from '@/shared/middleware/api-handler';
 import { ForbiddenError } from '@/shared/middleware/role-guard';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import { escapeRegExp } from '@/shared/utils/escape-regex';
@@ -19,13 +19,57 @@ function slugify(name: string): string {
 export const ProjectService = {
   async create(data: CreateProjectInput, userId: string) {
     const slug = slugify(data.name);
+    const { User } = await import('@/modules/users/user.model');
+    const teamMembers = await User.find({
+      isActive: true,
+      role: { $in: ['admin', 'internal'] },
+    })
+      .select('_id')
+      .lean();
+    const memberIds = teamMembers.map((u) => String(u._id));
+    if (!memberIds.includes(userId)) memberIds.push(userId);
+
     const project = await Project.create({
       ...data,
       slug,
       owner: userId,
-      members: [userId],
+      members: memberIds,
     });
     return project;
+  },
+
+  async inviteClientToProject(projectId: string, email: string) {
+    const { User } = await import('@/modules/users/user.model');
+    const { UserService } = await import('@/modules/users/user.service');
+
+    const project = await Project.findById(projectId);
+    if (!project) throw new NotFoundError('Project');
+
+    let inviteToken: string | undefined;
+    let user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    if (user) {
+      if (user.role !== 'client') {
+        throw new ConflictError(
+          'This email belongs to a team member. Add them via Add Member instead.',
+        );
+      }
+      if (!user.isActive) {
+        throw new ConflictError('This client account has been deactivated.');
+      }
+    } else {
+      const result = await UserService.invite({ email, role: 'client' });
+      inviteToken = result.inviteToken;
+      user = await User.findById(result.user.id);
+      if (!user) throw new NotFoundError('User');
+    }
+
+    await Project.updateOne(
+      { _id: projectId },
+      { $addToSet: { clients: user._id } },
+    );
+
+    return { user: user.toJSON(), inviteToken };
   },
 
   async list(
