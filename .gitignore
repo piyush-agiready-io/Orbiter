@@ -50,3 +50,4 @@ next-env.d.ts
 ORBITER_HANDBOOK.md
 LEARNINGS.md
 scripts/reset.ts
+public/orbiter-extension.zip

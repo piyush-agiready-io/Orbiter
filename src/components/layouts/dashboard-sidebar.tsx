@@ -11,6 +11,7 @@ import {
   Robot,
   UsersThree,
   Plus,
+  PuzzlePiece,
 } from '@phosphor-icons/react';
 import { useProjects } from '@/hooks/queries/use-projects';
 import { useFavorites } from '@/hooks/use-favorites';
@@ -226,6 +227,16 @@ export function DashboardSidebar({ mobileOpen = false, onClose }: SidebarProps) 
 
       {/* Settings */}
       <div className="flex flex-col gap-0.5">
+        <a
+          href="/orbiter-extension.zip"
+          download="orbiter-extension.zip"
+          onClick={handleNavClick}
+          className="flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm text-secondary transition-colors duration-[120ms] ease-[ease] hover:bg-subtle hover:text-primary"
+          title="Download the latest Chrome extension"
+        >
+          <PuzzlePiece size={16} className="shrink-0" />
+          <span>Download Extension</span>
+        </a>
         {user?.role === 'admin' && (
           <Link
             href="/admin"
