@@ -43,7 +43,10 @@ async function main() {
     console.log(`> rm -rf ${extensionNodeModules}`);
     rmSync(extensionNodeModules, { recursive: true, force: true });
   }
-  run('npm ci --no-audit --no-fund', extensionDir);
+  // --include=dev forces devDependencies even when NODE_ENV=production
+  // (which Vercel sets during builds). Without it, npm skips vite + the
+  // vite plugins entirely and the build can't run.
+  run('npm ci --include=dev --no-audit --no-fund', extensionDir);
   run('npx --no-install vite build', extensionDir);
 
   if (!existsSync(buildDir)) {
