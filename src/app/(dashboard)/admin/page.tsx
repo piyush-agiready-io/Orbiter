@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useUsers, useInviteUser, useDeactivateUser, useResendInvite, useUpdateUserRole } from '@/hooks/queries/use-users';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/shared/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +32,7 @@ import {
   ArrowClockwise,
   Clock,
   Warning,
+  ArrowsClockwise,
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { InfoTip } from '@/components/shared/info-tip';
@@ -74,6 +77,27 @@ export default function AdminPage() {
   const deactivateUser = useDeactivateUser();
   const resendInvite = useResendInvite();
   const updateRole = useUpdateUserRole();
+  const queryClient = useQueryClient();
+
+  const backfillMembers = useMutation({
+    mutationFn: () =>
+      api.post<{ projectsUpdated: number; membersSynced: number }>(
+        '/admin/backfill-project-members',
+        {},
+      ),
+    onSuccess: (result) => {
+      const r = result as { projectsUpdated: number; membersSynced: number };
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      if (r.projectsUpdated === 0) {
+        toast.success('All projects already include every team member');
+      } else {
+        toast.success(
+          `Synced ${r.membersSynced} member${r.membersSynced === 1 ? '' : 's'} into ${r.projectsUpdated} project${r.projectsUpdated === 1 ? '' : 's'}`,
+        );
+      }
+    },
+    onError: () => toast.error('Failed to sync members across projects'),
+  });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [email, setEmail] = useState('');
@@ -155,10 +179,21 @@ export default function AdminPage() {
             {users.length} members — {activeUsers.length} active, {pendingUsers.length} pending
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <UserPlus size={16} className="mr-1.5" />
-          Invite User
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => backfillMembers.mutate()}
+            disabled={backfillMembers.isPending}
+            title="Add every active team member to every existing project"
+          >
+            <ArrowsClockwise size={16} className="mr-1.5" />
+            {backfillMembers.isPending ? 'Syncing…' : 'Sync to all projects'}
+          </Button>
+          <Button onClick={() => setDialogOpen(true)}>
+            <UserPlus size={16} className="mr-1.5" />
+            Invite User
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

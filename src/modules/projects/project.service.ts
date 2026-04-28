@@ -178,6 +178,29 @@ export const ProjectService = {
     return project;
   },
 
+  async backfillTeamMembers() {
+    const { User } = await import('@/modules/users/user.model');
+    const teamMembers = await User.find({
+      isActive: true,
+      role: { $in: ['admin', 'internal'] },
+    })
+      .select('_id')
+      .lean();
+    const memberIds = teamMembers.map((u) => u._id);
+    if (memberIds.length === 0) {
+      return { projectsUpdated: 0, membersSynced: 0 };
+    }
+
+    const result = await Project.updateMany(
+      {},
+      { $addToSet: { members: { $each: memberIds } } },
+    );
+    return {
+      projectsUpdated: result.modifiedCount ?? 0,
+      membersSynced: memberIds.length,
+    };
+  },
+
   async checkAccess(projectId: string, userId: string, role: Role): Promise<boolean> {
     if (role === 'admin') return true;
 
