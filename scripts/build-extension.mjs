@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import { execSync } from 'node:child_process';
-import { mkdirSync, createWriteStream, existsSync, statSync } from 'node:fs';
+import { mkdirSync, createWriteStream, existsSync, statSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import archiver from 'archiver';
@@ -8,6 +8,7 @@ import archiver from 'archiver';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 const extensionDir = resolve(repoRoot, 'extension');
+const extensionNodeModules = resolve(extensionDir, 'node_modules');
 const buildDir = resolve(extensionDir, 'build');
 const outDir = resolve(repoRoot, 'public');
 const outZip = resolve(outDir, 'orbiter-extension.zip');
@@ -36,9 +37,14 @@ async function main() {
     return;
   }
 
-  // Vercel doesn't auto-install nested package.json deps. Do it ourselves.
-  run('npm install --no-audit --no-fund', extensionDir);
-  run('npm run build', extensionDir);
+  // Vercel restores partial caches that have left this dir in odd states.
+  // Wipe and reinstall from the lockfile so vite/etc. are guaranteed present.
+  if (existsSync(extensionNodeModules)) {
+    console.log(`> rm -rf ${extensionNodeModules}`);
+    rmSync(extensionNodeModules, { recursive: true, force: true });
+  }
+  run('npm ci --no-audit --no-fund', extensionDir);
+  run('npx --no-install vite build', extensionDir);
 
   if (!existsSync(buildDir)) {
     throw new Error(`Extension build did not produce ${buildDir}`);
