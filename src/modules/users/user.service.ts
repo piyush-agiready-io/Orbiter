@@ -71,16 +71,10 @@ export const UserService = {
       inviteExpiresAt: new Date(Date.now() + TOKEN_EXPIRY.INVITE),
     });
 
-    // Team members (admin/internal) get added to every existing project so
-    // they can collaborate immediately. Per-project removal stays explicit.
-    // Clients are scoped per-project and added via inviteClientToProject.
-    if (data.role !== 'client') {
-      const { Project } = await import('@/modules/projects/project.model');
-      await Project.updateMany(
-        {},
-        { $addToSet: { members: user._id } },
-      );
-    }
+    // We deliberately do NOT add invitees to projects here. They show up in
+    // every project only after they accept the invite (see AuthService.register).
+    // Otherwise pending users would appear in members lists and dashboards
+    // with no way to actually log in.
 
     const inviteUrl = `${env.NEXT_PUBLIC_APP_URL}/register/${rawToken}`;
     await sendInviteEmail(data.email, inviteUrl, data.role);

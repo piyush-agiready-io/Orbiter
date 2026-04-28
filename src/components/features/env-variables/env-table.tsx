@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { SetupNotesCard } from './setup-notes-card';
 
 interface EnvVarItem {
   id: string;
@@ -223,6 +224,8 @@ export function EnvTable() {
           e.target.value = '';
         }}
       />
+
+      <SetupNotesCard projectId={projectId} />
 
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">

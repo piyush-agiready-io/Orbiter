@@ -81,20 +81,26 @@ export default function AdminPage() {
 
   const backfillMembers = useMutation({
     mutationFn: () =>
-      api.post<{ projectsUpdated: number; membersSynced: number }>(
-        '/admin/backfill-project-members',
-        {},
-      ),
+      api.post<{
+        projectsUpdated: number;
+        membersSynced: number;
+        pendingRemoved: number;
+      }>('/admin/backfill-project-members', {}),
     onSuccess: (result) => {
-      const r = result as { projectsUpdated: number; membersSynced: number };
+      const r = result as {
+        projectsUpdated: number;
+        membersSynced: number;
+        pendingRemoved: number;
+      };
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      if (r.projectsUpdated === 0) {
-        toast.success('All projects already include every team member');
-      } else {
-        toast.success(
-          `Synced ${r.membersSynced} member${r.membersSynced === 1 ? '' : 's'} into ${r.projectsUpdated} project${r.projectsUpdated === 1 ? '' : 's'}`,
-        );
+      const parts: string[] = [];
+      if (r.membersSynced > 0) {
+        parts.push(`synced ${r.membersSynced} joined member${r.membersSynced === 1 ? '' : 's'}`);
       }
+      if (r.pendingRemoved > 0) {
+        parts.push(`removed ${r.pendingRemoved} pending invitee${r.pendingRemoved === 1 ? '' : 's'}`);
+      }
+      toast.success(parts.length > 0 ? parts.join(' · ') : 'Projects already in sync');
     },
     onError: () => toast.error('Failed to sync members across projects'),
   });

@@ -14,8 +14,10 @@ import {
   LinkSimple,
   GitBranch,
   Plus,
+  X,
 } from '@phosphor-icons/react';
-import { useProjectActivity } from '@/hooks/queries/use-activity';
+import { useProjectActivity, useDeleteActivity } from '@/hooks/queries/use-activity';
+import { useAuth } from '@/hooks/use-auth';
 
 const AVATAR_COLORS = ['#5B5FC7', '#4E52B0', '#E8E9F5', '#2E7D57', '#3178B9'];
 
@@ -41,6 +43,9 @@ const ACTION_CONFIG: Record<string, { icon: React.ElementType; label: string; co
 
 export function ActivityFeed({ projectId }: { projectId: string }) {
   const { data, isLoading } = useProjectActivity(projectId);
+  const deleteActivity = useDeleteActivity();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const response = data as { activities?: Array<{
     id: string;
     actor: { name: string };
@@ -85,7 +90,7 @@ export function ActivityFeed({ projectId }: { projectId: string }) {
         const Icon = config.icon;
 
         return (
-          <div key={activity.id} className="flex items-start gap-3 rounded-md px-2 py-2 transition-colors hover:bg-subtle">
+          <div key={activity.id} className="group flex items-start gap-3 rounded-md px-2 py-2 transition-colors hover:bg-subtle">
             <div className="relative mt-0.5 shrink-0">
               <Avatar
                 size={28}
@@ -113,6 +118,17 @@ export function ActivityFeed({ projectId }: { projectId: string }) {
                 {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
               </p>
             </div>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => deleteActivity.mutate(activity.id)}
+                className="mt-0.5 rounded p-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-subtle hover:text-primary group-hover:opacity-100"
+                aria-label="Delete activity entry"
+                title="Delete activity entry"
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
         );
       })}

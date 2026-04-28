@@ -68,6 +68,16 @@ export const AuthService = {
     user.lastLoginAt = new Date();
     await user.save();
 
+    // Now that the user has actually joined, add team members (admin/internal)
+    // to every existing project. Clients stay scoped per-project.
+    if (user.role !== 'client') {
+      const { Project } = await import('@/modules/projects/project.model');
+      await Project.updateMany(
+        {},
+        { $addToSet: { members: user._id } },
+      );
+    }
+
     const [accessToken, refreshToken] = await Promise.all([
       signAccessToken({ userId: user._id.toString(), role: user.role }),
       signRefreshToken({ userId: user._id.toString(), role: user.role }),

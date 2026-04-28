@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/lib/api-client';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -31,5 +31,15 @@ export function useProjectActivity(projectId: string, page = 1) {
       }),
     enabled: isAuthenticated && !!projectId,
     staleTime: 15_000,
+  });
+}
+
+export function useDeleteActivity() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/activity/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activity'] });
+    },
   });
 }

@@ -13,6 +13,7 @@ const githubRepoSchema = z.object({
 export const updateProjectSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   description: z.string().max(500).optional(),
+  setupNotes: z.string().max(10000).optional(),
   status: z.enum(['active', 'archived']).optional(),
   githubRepos: z.array(githubRepoSchema).max(20).optional(),
 });

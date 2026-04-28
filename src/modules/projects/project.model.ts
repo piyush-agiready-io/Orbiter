@@ -8,6 +8,7 @@ export interface GitHubOAuth {
 export interface ProjectDocument extends Document {
   name: string;
   description?: string;
+  setupNotes?: string;
   slug: string;
   status: 'active' | 'archived';
   owner: Schema.Types.ObjectId;
@@ -36,6 +37,10 @@ const projectSchema = new Schema<ProjectDocument>(
       trim: true,
     },
     description: {
+      type: String,
+      trim: true,
+    },
+    setupNotes: {
       type: String,
       trim: true,
     },

@@ -1,4 +1,5 @@
 import { Activity } from './activity.model';
+import { NotFoundError } from '@/shared/middleware/api-handler';
 import { PAGINATION_DEFAULTS } from '@/shared/utils/constants';
 import type { ActivityAction } from './activity.types';
 // Register referenced models so .populate('actor' | 'project') works on
@@ -37,6 +38,12 @@ export const ActivityService = {
     ]);
 
     return { activities, page, limit, total };
+  },
+
+  async delete(id: string) {
+    const activity = await Activity.findByIdAndDelete(id);
+    if (!activity) throw new NotFoundError('Activity');
+    return activity;
   },
 
   async listByUser(

@@ -22,9 +22,13 @@ export const ProjectService = {
   async create(data: CreateProjectInput, userId: string) {
     const slug = slugify(data.name);
     const { User } = await import('@/modules/users/user.model');
+    // Only users who have actually joined (lastLoginAt set) get auto-added.
+    // Pending invitees stay out until they accept; AuthService.register
+    // pulls them into existing projects on accept.
     const teamMembers = await User.find({
       isActive: true,
       role: { $in: ['admin', 'internal'] },
+      lastLoginAt: { $ne: null },
     })
       .select('_id')
       .lean();
@@ -180,24 +184,48 @@ export const ProjectService = {
 
   async backfillTeamMembers() {
     const { User } = await import('@/modules/users/user.model');
-    const teamMembers = await User.find({
+
+    // Joined team members → added to every project.
+    const joined = await User.find({
       isActive: true,
       role: { $in: ['admin', 'internal'] },
+      lastLoginAt: { $ne: null },
     })
       .select('_id')
       .lean();
-    const memberIds = teamMembers.map((u) => u._id);
-    if (memberIds.length === 0) {
-      return { projectsUpdated: 0, membersSynced: 0 };
+    const joinedIds = joined.map((u) => u._id);
+
+    // Pending team members (invited but not yet joined) → removed from any
+    // project they were wrongly added to by an earlier sync. They'll be
+    // re-added automatically when they accept the invite.
+    const pending = await User.find({
+      role: { $in: ['admin', 'internal'] },
+      $or: [{ lastLoginAt: null }, { lastLoginAt: { $exists: false } }],
+    })
+      .select('_id')
+      .lean();
+    const pendingIds = pending.map((u) => u._id);
+
+    let added = { modifiedCount: 0 };
+    let removed = { modifiedCount: 0 };
+
+    if (joinedIds.length > 0) {
+      added = await Project.updateMany(
+        {},
+        { $addToSet: { members: { $each: joinedIds } } },
+      );
+    }
+    if (pendingIds.length > 0) {
+      removed = await Project.updateMany(
+        {},
+        { $pullAll: { members: pendingIds } },
+      );
     }
 
-    const result = await Project.updateMany(
-      {},
-      { $addToSet: { members: { $each: memberIds } } },
-    );
     return {
-      projectsUpdated: result.modifiedCount ?? 0,
-      membersSynced: memberIds.length,
+      membersSynced: joinedIds.length,
+      pendingRemoved: pendingIds.length,
+      projectsUpdated: Math.max(added.modifiedCount ?? 0, removed.modifiedCount ?? 0),
     };
   },
 
