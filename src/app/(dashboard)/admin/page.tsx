@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useUsers, useInviteUser, useDeactivateUser, useResendInvite } from '@/hooks/queries/use-users';
+import { useUsers, useInviteUser, useDeactivateUser, useResendInvite, useUpdateUserRole } from '@/hooks/queries/use-users';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,6 +73,7 @@ export default function AdminPage() {
   const inviteUser = useInviteUser();
   const deactivateUser = useDeactivateUser();
   const resendInvite = useResendInvite();
+  const updateRole = useUpdateUserRole();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [email, setEmail] = useState('');
@@ -121,6 +122,21 @@ export default function AdminPage() {
       onSuccess: () => toast.success(`Invite resent to ${u.email}`),
       onError: () => toast.error('Failed to resend invite'),
     });
+  };
+
+  const handleRoleChange = (u: UserItem, nextRole: 'admin' | 'internal') => {
+    if (nextRole === u.role) return;
+    updateRole.mutate(
+      { userId: u.id, role: nextRole },
+      {
+        onSuccess: () => toast.success(`${u.name} is now ${nextRole}`),
+        onError: (err) => {
+          const message =
+            (err as { message?: string })?.message ?? 'Failed to update role';
+          toast.error(message);
+        },
+      },
+    );
   };
 
   const activeUsers = users.filter((u) => u.inviteStatus === 'active');
@@ -187,7 +203,28 @@ export default function AdminPage() {
                           <span className="mr-1">{statusConfig.icon}</span>
                           {statusConfig.label}
                         </Badge>
-                        <Badge className={ROLE_STYLES[u.role] ?? ''}>{u.role}</Badge>
+                        {u.role === 'client' || u.id === user?.id ? (
+                          <Badge className={ROLE_STYLES[u.role] ?? ''}>{u.role}</Badge>
+                        ) : (
+                          <Select
+                            value={u.role}
+                            onValueChange={(v) =>
+                              v && handleRoleChange(u, v as 'admin' | 'internal')
+                            }
+                          >
+                            <SelectTrigger
+                              size="sm"
+                              className="h-7 w-[110px] text-xs"
+                              disabled={updateRole.isPending}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="internal">Internal</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                         <div className="flex items-center gap-1">
                           {(u.inviteStatus === 'pending' || u.inviteStatus === 'expired') && (
                             <Button

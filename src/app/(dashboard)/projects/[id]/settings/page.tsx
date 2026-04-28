@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Trash, UserPlus, Copy, CheckCircle, EnvelopeSimple } from '@phosphor-icons/react';
+import { Trash, UserPlus, Copy, CheckCircle, EnvelopeSimple, Sparkle } from '@phosphor-icons/react';
 import { useProject, useDeleteProject } from '@/hooks/queries/use-projects';
 import { useUsers } from '@/hooks/queries/use-users';
 import { useAuth } from '@/hooks/use-auth';
@@ -32,6 +32,7 @@ import Avatar from 'boring-avatars';
 import { toast } from 'sonner';
 import { InfoTip } from '@/components/shared/info-tip';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { AiDescriptionDialog } from '@/components/features/projects/ai-description-dialog';
 
 const updateSchema = z.object({
   name: z.string().min(2).max(100),
@@ -62,6 +63,7 @@ interface ProjectData {
   owner?: PopulatedUser;
   members?: PopulatedUser[];
   clients?: PopulatedUser[];
+  githubRepos?: { owner: string; repo: string }[];
 }
 
 const ROLE_BADGE: Record<string, string> = {
@@ -185,6 +187,65 @@ export default function ProjectSettingsPage() {
     },
   });
 
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+
+  const suggestDescription = useMutation({
+    mutationFn: () =>
+      api.post<{ description: string | null; reason?: string }>(
+        `/projects/${params.id}/suggest-description`,
+        {},
+      ),
+    meta: { silent: true },
+  });
+
+  const updateDescription = useMutation({
+    mutationFn: (description: string) =>
+      api.patch(`/projects/${params.id}`, { description }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', params.id] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+  });
+
+  const handleAiSuggest = () => {
+    setAiSuggestion(null);
+    setAiDialogOpen(true);
+    suggestDescription.mutate(undefined, {
+      onSuccess: (result) => {
+        const r = result as { description: string | null; reason?: string };
+        if (r.description) {
+          setAiSuggestion(r.description);
+          return;
+        }
+        setAiDialogOpen(false);
+        const messages: Record<string, string> = {
+          github_not_connected: 'Connect GitHub on this project first.',
+          no_repo: 'Link a repository to this project first.',
+          no_readme: 'No README found in the linked repository.',
+          no_ai_key: 'AI is not configured. Connect ChatGPT in workspace settings.',
+          ai_failed: 'AI request failed — try again in a moment.',
+          ai_empty: 'AI returned an empty result — try again.',
+        };
+        toast.message(messages[r.reason ?? ''] ?? 'Could not generate a description.');
+      },
+      onError: () => {
+        setAiDialogOpen(false);
+        toast.error('Could not generate description');
+      },
+    });
+  };
+
+  const handleAiSave = (description: string) => {
+    updateDescription.mutate(description, {
+      onSuccess: () => {
+        setAiDialogOpen(false);
+        form.setValue('description', description, { shouldDirty: false });
+        toast.success('Description updated');
+      },
+    });
+  };
+
   const form = useForm<FormValues>({
     resolver: zodResolver(updateSchema),
     defaultValues: { name: '', description: '' },
@@ -220,7 +281,20 @@ export default function ProjectSettingsPage() {
             )}
           </div>
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-primary">Description</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-primary">Description</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={handleAiSuggest}
+                disabled={suggestDescription.isPending}
+                title="Generate a description from the linked GitHub repo's README"
+              >
+                <Sparkle size={12} weight="fill" className="mr-1 text-accent" />
+                Suggest with AI
+              </Button>
+            </div>
             <textarea
               {...form.register('description')}
               rows={3}
@@ -504,6 +578,15 @@ export default function ProjectSettingsPage() {
           });
         }}
         loading={deleteProject.isPending}
+      />
+
+      <AiDescriptionDialog
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        loading={suggestDescription.isPending}
+        suggestion={aiSuggestion}
+        onConfirm={handleAiSave}
+        saving={updateDescription.isPending}
       />
     </div>
   );

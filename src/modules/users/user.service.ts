@@ -71,10 +71,32 @@ export const UserService = {
       inviteExpiresAt: new Date(Date.now() + TOKEN_EXPIRY.INVITE),
     });
 
+    // Team members (admin/internal) get added to every existing project so
+    // they can collaborate immediately. Per-project removal stays explicit.
+    // Clients are scoped per-project and added via inviteClientToProject.
+    if (data.role !== 'client') {
+      const { Project } = await import('@/modules/projects/project.model');
+      await Project.updateMany(
+        {},
+        { $addToSet: { members: user._id } },
+      );
+    }
+
     const inviteUrl = `${env.NEXT_PUBLIC_APP_URL}/register/${rawToken}`;
     await sendInviteEmail(data.email, inviteUrl, data.role);
 
     return { user: user.toJSON(), inviteToken: rawToken };
+  },
+
+  async updateRole(id: string, role: 'admin' | 'internal') {
+    const user = await User.findById(id);
+    if (!user) throw new NotFoundError('User');
+    if (user.role === 'client') {
+      throw new ConflictError('Client accounts cannot be promoted to team roles');
+    }
+    user.role = role;
+    await user.save();
+    return user;
   },
 
   async resendInvite(userId: string) {

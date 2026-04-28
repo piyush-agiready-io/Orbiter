@@ -6,6 +6,10 @@ export const inviteUserSchema = z.object({
   role: z.enum(ROLES),
 });
 
+export const updateUserRoleSchema = z.object({
+  role: z.enum(['admin', 'internal']),
+});
+
 export const updateProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   avatar: z.string().url().optional(),
@@ -26,3 +30,4 @@ export const userQuerySchema = z.object({
 
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type UpdateUserRoleInput = z.infer<typeof updateUserRoleSchema>;

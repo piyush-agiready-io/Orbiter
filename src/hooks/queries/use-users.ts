@@ -50,3 +50,14 @@ export function useResendInvite() {
     },
   });
 }
+
+export function useUpdateUserRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: 'admin' | 'internal' }) =>
+      api.patch(`/users/${userId}`, { role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+}

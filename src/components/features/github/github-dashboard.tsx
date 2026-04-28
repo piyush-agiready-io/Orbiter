@@ -37,6 +37,7 @@ import { toast } from 'sonner';
 import { InfoTip } from '@/components/shared/info-tip';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { SyncProgress } from './sync-progress';
+import { AiDescriptionDialog } from '@/components/features/projects/ai-description-dialog';
 
 interface GitHubDashboardProps {
   projectId: string;
@@ -63,8 +64,61 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
   const [syncComplete, setSyncComplete] = useState(false);
   const [syncResult, setSyncResult] = useState<{ commitCount?: number; prCount?: number } | undefined>();
 
-  const project = projectData as { githubRepos?: GitHubRepo[] } | undefined;
+  const project = projectData as { description?: string; githubRepos?: GitHubRepo[] } | undefined;
   const githubRepos = project?.githubRepos ?? [];
+  const projectHasDescription = !!project?.description?.trim();
+
+  const [descDialogOpen, setDescDialogOpen] = useState(false);
+  const [descSuggestion, setDescSuggestion] = useState<string | null>(null);
+
+  const suggestDescription = useMutation({
+    mutationFn: () =>
+      api.post<{ description: string | null; reason?: string }>(
+        `/projects/${projectId}/suggest-description`,
+        {},
+      ),
+    meta: { silent: true },
+  });
+
+  const updateDescription = useMutation({
+    mutationFn: (description: string) =>
+      api.patch(`/projects/${projectId}`, { description }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+  });
+
+  const offerDescription = () => {
+    setDescSuggestion(null);
+    setDescDialogOpen(true);
+    suggestDescription.mutate(undefined, {
+      onSuccess: (result) => {
+        const r = result as { description: string | null; reason?: string };
+        if (r.description) {
+          setDescSuggestion(r.description);
+        } else {
+          setDescDialogOpen(false);
+          if (r.reason === 'no_readme') {
+            toast.message('No README found — description not generated');
+          }
+        }
+      },
+      onError: () => {
+        setDescDialogOpen(false);
+        toast.error('Could not generate description from README');
+      },
+    });
+  };
+
+  const handleSaveDescription = (description: string) => {
+    updateDescription.mutate(description, {
+      onSuccess: () => {
+        setDescDialogOpen(false);
+        toast.success('Project description updated');
+      },
+    });
+  };
 
   const { data: availableReposData } = useGitHubRepos(projectId, !!data?.githubConnected && githubRepos.length === 0);
   const availableRepos = (availableReposData as { repos?: Array<{ owner: string; repo: string; fullName: string; private: boolean; description: string | null; linked: boolean }> })?.repos ?? [];
@@ -222,12 +276,24 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
                 onSuccess: () => {
                   setRepoSearch('');
                   toast.success(`Added ${fullName}`);
+                  if (!projectHasDescription) {
+                    offerDescription();
+                  }
                   setTimeout(() => handleSync(), 500);
                 },
               });
             }}
           />
         </div>
+
+        <AiDescriptionDialog
+          open={descDialogOpen}
+          onOpenChange={setDescDialogOpen}
+          loading={suggestDescription.isPending}
+          suggestion={descSuggestion}
+          onConfirm={handleSaveDescription}
+          saving={updateDescription.isPending}
+        />
       </div>
     );
   }
@@ -439,6 +505,14 @@ export function GitHubDashboard({ projectId }: GitHubDashboardProps) {
         variant="danger"
         onConfirm={handleRemoveRepo}
         loading={updateRepos.isPending}
+      />
+      <AiDescriptionDialog
+        open={descDialogOpen}
+        onOpenChange={setDescDialogOpen}
+        loading={suggestDescription.isPending}
+        suggestion={descSuggestion}
+        onConfirm={handleSaveDescription}
+        saving={updateDescription.isPending}
       />
     </div>
   );
