@@ -4,13 +4,16 @@ import { env } from '@/config/env';
 let transporter: nodemailer.Transporter | null = null;
 
 function getTransporter(): nodemailer.Transporter | null {
-  if (!env.SMTP_USER || !env.SMTP_PASS) return null;
+  if (!env.RESEND_API_KEY) return null;
   if (!transporter) {
     transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.resend.com',
+      port: 587,
+      secure: false,
+      requireTLS: true,
       auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS,
+        user: 'resend',
+        pass: env.RESEND_API_KEY,
       },
     });
   }
@@ -26,13 +29,13 @@ interface SendEmailOptions {
 async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   const transport = getTransporter();
   if (!transport) {
-    console.warn('Email not configured — SMTP_USER/SMTP_PASS missing');
+    console.warn('Email not configured — RESEND_API_KEY missing');
     return false;
   }
 
   try {
     const result = await transport.sendMail({
-      from: `Orbiter <${env.SMTP_USER}>`,
+      from: env.EMAIL_FROM,
       to: options.to,
       subject: options.subject,
       html: options.html,
