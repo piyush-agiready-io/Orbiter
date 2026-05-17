@@ -56,6 +56,16 @@ export function BugCapture({ user, onLogout }: BugCaptureProps) {
         ?.map((log) => `[${log.level.toUpperCase()}] ${log.message}`)
         .join('\n') || '';
 
+      // Format network requests into a human-readable string mirroring the
+      // consoleLogs format. The backend stores this verbatim and bug-detail.tsx
+      // renders it as a <pre> block.
+      const networkLogs = capturedData?.networkLogs
+        ?.map((req) => {
+          const status = req.status === 0 ? 'ERR' : String(req.status);
+          return `${req.method} ${req.url} -> ${status} (${req.durationMs}ms)`;
+        })
+        .join('\n') || '';
+
       const bugData = {
         title: title.trim(),
         description: description.trim() || undefined,
@@ -65,6 +75,7 @@ export function BugCapture({ user, onLogout }: BugCaptureProps) {
         metadata: {
           url: capturedData?.url || 'Unknown',
           consoleLogs: consoleLogs || undefined,
+          networkLogs: networkLogs || undefined,
           screenshot: screenshotUrl,
           device: capturedData?.device || 'Unknown',
           browser: capturedData?.browser || 'Unknown',
@@ -182,6 +193,11 @@ export function BugCapture({ user, onLogout }: BugCaptureProps) {
             {capturedData?.consoleLogs && capturedData.consoleLogs.length > 0 && (
               <span>
                 {capturedData.consoleLogs.filter((l) => l.level === 'error').length} errors
+              </span>
+            )}
+            {capturedData?.networkLogs && capturedData.networkLogs.length > 0 && (
+              <span>
+                {capturedData.networkLogs.length} requests
               </span>
             )}
           </div>

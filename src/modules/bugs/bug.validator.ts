@@ -11,6 +11,7 @@ export const createBugSchema = z.object({
     .object({
       url: z.string().url().optional(),
       consoleLogs: z.string().max(50000).optional(),
+      networkLogs: z.string().max(50000).optional(),
       screenshot: z.string().url().optional(),
       device: z.string().max(100).optional(),
       browser: z.string().max(100).optional(),
@@ -36,6 +37,7 @@ export const updateBugSchema = z.object({
     .object({
       url: z.string().url().optional(),
       consoleLogs: z.string().max(50000).optional(),
+      networkLogs: z.string().max(50000).optional(),
       screenshot: z.string().url().optional(),
       device: z.string().max(100).optional(),
       browser: z.string().max(100).optional(),

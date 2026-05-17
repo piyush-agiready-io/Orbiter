@@ -21,6 +21,7 @@ export interface BugDocument extends Document {
   metadata: {
     url?: string;
     consoleLogs?: string;
+    networkLogs?: string;
     screenshot?: string;
     device?: string;
     browser?: string;
@@ -44,6 +45,7 @@ const bugMetadataSchema = new Schema(
   {
     url: { type: String },
     consoleLogs: { type: String },
+    networkLogs: { type: String },
     screenshot: { type: String },
     device: { type: String },
     browser: { type: String },

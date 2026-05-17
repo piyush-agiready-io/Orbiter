@@ -37,6 +37,7 @@ export function useCapture(): UseCaptureReturn {
         pageData = {
           url: tab.url || 'Unknown',
           consoleLogs: [],
+          networkLogs: [],
           screenshot: null,
           device: 'Desktop',
           browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Unknown',

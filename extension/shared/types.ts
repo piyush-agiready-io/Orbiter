@@ -14,6 +14,7 @@ export interface ExtProject {
 export interface CapturedData {
   url: string;
   consoleLogs: ConsoleLogEntry[];
+  networkLogs: NetworkLogEntry[];
   screenshot: Blob | null;
   device: string;
   browser: string;
@@ -22,8 +23,16 @@ export interface CapturedData {
 }
 
 export interface ConsoleLogEntry {
-  level: 'error' | 'warn' | 'log';
+  level: 'error' | 'warn' | 'info' | 'log';
   message: string;
+  timestamp: number;
+}
+
+export interface NetworkLogEntry {
+  method: string;
+  url: string;
+  status: number;
+  durationMs: number;
   timestamp: number;
 }
 
@@ -35,6 +44,7 @@ export interface BugSubmission {
   metadata: {
     url: string;
     consoleLogs: string;
+    networkLogs?: string;
     screenshot?: string;
     device: string;
     browser: string;

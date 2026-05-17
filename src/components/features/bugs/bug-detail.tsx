@@ -65,6 +65,7 @@ interface BugData {
     os?: string;
     viewport?: { width: number; height: number };
     consoleLogs?: string;
+    networkLogs?: string;
     screenshot?: string;
   };
   createdAt: string;
@@ -149,6 +150,7 @@ export function BugDetail({ projectId, bugId }: { projectId: string; bugId: stri
     bug.metadata.browser ||
     bug.metadata.os ||
     bug.metadata.consoleLogs ||
+    bug.metadata.networkLogs ||
     bug.metadata.screenshot;
 
   return (
@@ -300,6 +302,21 @@ export function BugDetail({ projectId, bugId }: { projectId: string; bugId: stri
                   </div>
                   <pre className="max-h-48 overflow-auto rounded-lg border border-subtle bg-subtle p-3 font-mono text-xs leading-relaxed text-secondary">
                     {bug.metadata.consoleLogs}
+                  </pre>
+                </div>
+              )}
+
+              {/* Network Logs */}
+              {bug.metadata.networkLogs && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Terminal size={14} className="text-[var(--color-text-muted)]" />
+                    <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Network Activity
+                    </h3>
+                  </div>
+                  <pre className="max-h-48 overflow-auto rounded-lg border border-subtle bg-subtle p-3 font-mono text-xs leading-relaxed text-secondary">
+                    {bug.metadata.networkLogs}
                   </pre>
                 </div>
               )}

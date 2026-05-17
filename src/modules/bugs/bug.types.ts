@@ -10,6 +10,7 @@ export type BugSource = (typeof BUG_SOURCES)[number];
 export interface IBugMetadata {
   url?: string;
   consoleLogs?: string;
+  networkLogs?: string;
   screenshot?: string;
   device?: string;
   browser?: string;
